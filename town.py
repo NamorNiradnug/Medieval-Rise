@@ -35,9 +35,7 @@ class Chunk:
                                     for j in range(16)]) for i in range(16)])
         self.grounds = tuple([[None for j in range(16)] for i in range(16)])
 
-    def draw(self, painter: QPainter, x: float, y: float, zoom: float = 1) -> None:
-        if self.blocks is None:
-            return
+    def draw(self, painter: QPainter, x: int, y: int, zoom: float = 1) -> None:
         # Draw all blocks & grounds in chunk sorted by x, y, z
         for i in range(16):
             for j in range(16):
@@ -48,7 +46,7 @@ class Chunk:
                     if building is not None:
                         block, angle = building.getBlock(i + 16 * self.x,
                                                          j + 16 * self.y, z)
-                        block.draw((self.x + i) * 128 + x, ((self.y + j) * 128 - z * 64 + y),
+                        block.draw((self.x + i) * 111 - x, ((self.y + j) * 128 - z * 64 - y),
                                    zoom, angle, painter)
 
 
@@ -95,14 +93,15 @@ class Town:
     def __init__(self):
         self.cam_x = 0  # |
         self.cam_y = 0  # | - position of camera.
-        self.cam_z = 1  # |
+        self.cam_z = 2  # |
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
-    def draw(self, painter: QPainter, size: QSize, zoom: float = 1) -> None:
+    def draw(self, painter: QPainter, size: QSize) -> None:
+        zoom = 1 / self.cam_z
         painter.scale(zoom, zoom)
         for chunks in self.chunks:
             for chunk in chunks:
