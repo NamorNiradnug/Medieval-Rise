@@ -10,6 +10,6 @@ def getImage(name: str) -> QImage:
     else:
         resource = QImage("assets/" + name + ".png")
         if resource.isNull():
-            raise ValueError("Resource doesn't exist")
+            raise ValueError("Resource " + name + ".png doesn't exist")
         imageResources[name] = resource
         return resource

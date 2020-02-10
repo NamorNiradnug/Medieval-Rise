@@ -45,21 +45,21 @@ class Frame(QMainWindow):
         self.draw_thread.cancel()
 
     def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.RightButton:
             self.press_pos = event.pos()
 
     def mouseMoveEvent(self, event: QMouseEvent):
+        print('moving')
         if self.press_pos:
             delta = event.pos() - self.press_pos
-            print(delta)
+            print(delta.x(), delta.y())
             self.town.cam_x += delta.x()
             self.town.cam_y += delta.y()
             self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.RightButton:
             self.press_pos = None
-
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
@@ -67,12 +67,13 @@ class Frame(QMainWindow):
         geom = self.geometry()
 
         grass = QPixmap(getImage("grass"))
-        painter.drawTiledPixmap(QRectF(0, 0, geom.width(), geom.height()), grass)
+        painter.drawTiledPixmap(
+            QRectF(0, 0, geom.width(), geom.height()), grass)
         painter.drawTiledPixmap(QRectF(-grass.width() / 2, -grass.height() / 2,
                                        geom.width() + grass.width(), geom.height() + grass.height()),
                                 grass)
 
-        self.town.draw(painter)
+        self.town.draw(painter, self.size())
 
 
 if __name__ == '__main__':

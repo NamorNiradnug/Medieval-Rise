@@ -1,10 +1,10 @@
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.Qt import QImage
+from PyQt5.Qt import QImage, QSize
 
 from resources_manager import getImage
 
 
-class Block:
+class Block():
     def __init__(self, name: str):
         self.sides = {i: getImage(name + str(i)) for i in range(0, 360, 90)}
 
@@ -12,7 +12,16 @@ class Block:
         painter.drawImage(x * zoom, y * zoom, self.sides[angle])
 
 
-block = Block('block')
+class BlocksManager:
+    blocks = {name: Block(name) for name in ('block', )}
+
+    def __getattr__(self, item):
+        if item in self.blocks:
+            return self.blocks[item]
+        raise AttributeError('Block "' + item + '" does not exist.')
+
+
+Blocks = BlocksManager()
 
 
 class Chunk:
@@ -57,8 +66,8 @@ class BuildingType:
         self.blocks = blocks
 
 
-building_type1 = BuildingType((((block,),),))
-building_type2 = BuildingType((((block, block),),))
+building_type1 = BuildingType((((Blocks.block,),),))
+building_type2 = BuildingType((((Blocks.block, Blocks.block),),))
 
 
 class TownObject:
@@ -93,9 +102,10 @@ class Town:
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
-    def draw(self, painter: QPainter, zoom: float = .5) -> None:
+    def draw(self, painter: QPainter, size: QSize, zoom: float = 1) -> None:
         painter.scale(zoom, zoom)
-        # TODO draw only visible chunks!!
         for chunks in self.chunks:
             for chunk in chunks:
-                chunk.draw(painter, self.cam_x, self.cam_y)
+                if 0 <= chunk.x * 128 * zoom <= size.width() + 128 * zoom and \
+                   0 <= chunk.y * 128 * zoom <= size.height() + 128 * zoom:
+                    chunk.draw(painter, self.cam_x, self.cam_y)
