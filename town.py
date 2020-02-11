@@ -4,12 +4,12 @@ from PyQt5.Qt import QImage, QSize
 from resources_manager import getImage
 
 
-class Block():
+class Block:
     def __init__(self, name: str):
         self.sides = {i: getImage(name + str(i)) for i in range(0, 360, 90)}
 
-    def draw(self, x: float, y: float, zoom: float, angle: int, painter: QPainter) -> None:
-        painter.drawImage(x * zoom, y * zoom, self.sides[angle])
+    def draw(self, x: float, y: float, scale: float, angle: int, painter: QPainter) -> None:
+        painter.drawImage(x * scale, y * scale, self.sides[angle])
 
 
 class BlocksManager:
@@ -24,6 +24,26 @@ class BlocksManager:
 Blocks = BlocksManager()
 
 
+class Ground:
+    def __init__(self, name: str):
+        self.image = getImage(name)
+
+    def draw(self, x: float, y: float, scale: float, painter: QPainter) -> None:
+        painter.drawImage(x * scale, y * scale, self.image)
+
+
+class GroundsManager:
+    grounds = {name: Ground(name) for name in ('grass', )}
+
+    def __getattr__(self, item):
+        if item in self.grounds:
+            return self.grounds[item]
+        raise AttributeError('Ground "' + item + '" does not exist.')
+
+
+Grounds = GroundsManager()
+
+
 class Chunk:
     """Store data of blocks in 16 by 16 square"""
 
@@ -33,21 +53,23 @@ class Chunk:
         # Generate matrix 16 by 16 by 3.
         self.blocks = tuple([tuple([[None, None, None]
                                     for j in range(16)]) for i in range(16)])
-        self.grounds = tuple([[None for j in range(16)] for i in range(16)])
+        self.grounds = tuple([[Grounds.grass for j in range(16)] for i in range(16)])
 
-    def draw(self, painter: QPainter, x: int, y: int, zoom: float = 1) -> None:
-        # Draw all blocks & grounds in chunk sorted by x, y, z
+    def draw(self, painter: QPainter, x: int, y: int, scale: float = 1) -> None:
+        # for i in range(16):
+            # for j in range(16):
+                #self.grounds[i][j].draw((self.x + i) * 111 - x, (self.y + j) * 56 - y, scale, painter)
+        # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
             for j in range(16):
-                if self.grounds[i][j] is not None:
-                    self.grounds[i][j].draw()
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
+                        # FIXME drawing of buildings!!!!!
                         block, angle = building.getBlock(i + 16 * self.x,
                                                          j + 16 * self.y, z)
                         block.draw((self.x + i) * 111 - x, ((self.y + j) * 128 - z * 64 - y),
-                                   zoom, angle, painter)
+                                   scale, angle, painter)
 
 
 class TownObjectType:
@@ -65,7 +87,7 @@ class BuildingType:
 
 
 building_type1 = BuildingType((((Blocks.block,),),))
-building_type2 = BuildingType((((Blocks.block, Blocks.block),),))
+building_type2 = BuildingType((((Blocks.block, Blocks.block), (Blocks.block, )),))
 
 
 class TownObject:
@@ -93,7 +115,7 @@ class Town:
     def __init__(self):
         self.cam_x = 0  # |
         self.cam_y = 0  # | - position of camera.
-        self.cam_z = 2  # |
+        self.scale = .5
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
@@ -101,10 +123,9 @@ class Town:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
     def draw(self, painter: QPainter, size: QSize) -> None:
-        zoom = 1 / self.cam_z
-        painter.scale(zoom, zoom)
+        painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if 0 <= chunk.x * 128 * zoom <= size.width() + 128 * zoom and \
-                   0 <= chunk.y * 128 * zoom <= size.height() + 128 * zoom:
+                if 0 <= chunk.x * 128 * self.scale <= size.width() + 128 * self.scale and \
+                   0 <= chunk.y * 128 * self.scale <= size.height() + 128 * self.scale:
                     chunk.draw(painter, self.cam_x, self.cam_y)

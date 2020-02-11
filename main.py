@@ -51,8 +51,8 @@ class Frame(QMainWindow):
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.last_pos:
             delta = event.pos() - self.last_pos
-            self.town.cam_x -= delta.x()
-            self.town.cam_y -= delta.y()
+            self.town.cam_x -= delta.x() / self.town.scale
+            self.town.cam_y -= delta.y() / self.town.scale
             self.last_pos = event.pos()
             self.update()
 
