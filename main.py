@@ -36,7 +36,7 @@ class Frame(QMainWindow):
 
         self.town = town
 
-        self.press_pos = None
+        self.last_pos = None
 
     def setSize(self, size: QSize) -> None:
         QMainWindow.setGeometry(self, QRect(QApplication.desktop().screenGeometry().center()
@@ -52,8 +52,8 @@ class Frame(QMainWindow):
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.last_pos:
             delta = event.pos() - self.last_pos
-            self.town.cam_x -= delta.x() / self.town.scale
-            self.town.cam_y -= delta.y() / self.town.scale
+            self.town.cam_x -= delta.x() * self.town.cam_z
+            self.town.cam_y -= delta.y() * self.town.cam_z
             self.last_pos = event.pos()
             self.update()
 
@@ -61,11 +61,11 @@ class Frame(QMainWindow):
         if event.button() == Qt.RightButton:
             self.last_pos = None
 
+
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
-        t = time()
         self.town.draw(painter, self.size())
-        print(time() - t)
+        painter.end()
 
 
 if __name__ == '__main__':
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     frame = Frame(town)
     frame.showMaximized()
     frame.setWindowTitle('Town')
-    frame.setWindowIcon(QIcon(QPixmap(getImage('empty_block'))))
+    frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
     for i in range(5):
         for j in range(5):
             Town.Building(3 * i, 3 * j, (i * 90) % 360, town, Town.building_type2)

@@ -8,7 +8,7 @@ class Block:
     def __init__(self, name: str):
         self.sides = {i: getImage(name + str(i)) for i in range(0, 360, 90)}
 
-    def draw(self, x: float, y: float, scale: float, angle: int, painter: QPainter) -> None:
+    def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
         painter.drawImage(x - 55, y - 64, self.sides[angle])
 
 
@@ -28,10 +28,8 @@ class Ground:
     def __init__(self, name: str):
         self.image = getImage(name)
 
-    def draw(self, x: float, y: float, scale: float, painter: QPainter, size: QSize) -> None:
-        if -55 * scale <= x * scale <= size.width() + 55 * scale and \
-           -64 * scale <= y * scale <= size.height():
-            painter.drawImage(x - 55, y, self.image)
+    def draw(self, x: float, y: float, painter: QPainter) -> None:
+        painter.drawImage(x - 55, y, self.image)
 
 
 class GroundsManager:
@@ -57,11 +55,11 @@ class Chunk:
                                     for j in range(16)]) for i in range(16)])
         self.grounds = tuple([[Grounds.grass for j in range(16)] for i in range(16)])
 
-    def draw(self, painter: QPainter, x: int, y: int, size: QSize, scale: float = 1) -> None:
+    def draw(self, painter: QPainter, x: int, y: int) -> None:
         for i in range(16):
             for j in range(16):
-                self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x, (self.x + self.y + i + j)
-                                        * 32 - y, scale, painter, size)
+                self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x,
+                                        (self.x + self.y + i + j) * 32 - y, painter)
         # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
             for j in range(16):
@@ -70,8 +68,8 @@ class Chunk:
                     if building is not None:
                         block, angle = building.getBlock(i + 16 * self.x,
                                                          j + 16 * self.y, z)
-                        block.draw((self.x + i - self.y - j) * 55 - x, (self.x + self.y + i + j)
-                                   * 32 - z * 64 - y, scale, angle, painter)
+                        block.draw((self.x + i - self.y - j) * 55 - x,
+                                   (self.x + self.y + i + j) * 32 - z * 64 - y, angle, painter)
 
 
 class TownObjectType:
@@ -118,6 +116,7 @@ class Town:
     def __init__(self):
         self.cam_x = 0  # |
         self.cam_y = 0  # | - position of camera.
+        self.cam_z = 2  # |
         self.scale = .5
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
@@ -129,5 +128,6 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                # if -55 * 16 <= (chunk.x - chunk.y) * 55 - self.cam_x * self.scale <= size.width() + 55 * 16:
-                chunk.draw(painter, self.cam_x, self.cam_y, size, self.scale)
+                if -880 < ((chunk.x - chunk.y) * 55 - self.cam_x) * self.scale < size.width() + 880 and \
+                   -1024 < ((chunk.x + chunk.y) * 32 - self.cam_y) * self.scale < size.height():
+                    chunk.draw(painter, self.cam_x, self.cam_y)
