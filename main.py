@@ -1,12 +1,13 @@
 from types import FunctionType
 from threading import Thread, Event
+from time import time
 
 from PyQt5.QtCore import QRect, QSize, QPoint, QRectF, Qt
 from PyQt5.QtGui import (QPainter, QIcon, QImage, QPixmap,
                          QMouseEvent, QCloseEvent, QPaintEvent)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
-import town
+import Town
 from resources_manager import getImage
 
 
@@ -26,14 +27,14 @@ class Interval(Thread):
 
 
 class Frame(QMainWindow):
-    def __init__(self, med_town: town.Town, size: QSize = QSize(640, 480)):
+    def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
         super().__init__()
         self.setSize(size)
 
         self.draw_thread = Interval(1 / 60, self.update)
         self.draw_thread.start()
 
-        self.town = med_town
+        self.Town = town
 
         self.press_pos = None
 
@@ -51,8 +52,8 @@ class Frame(QMainWindow):
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.last_pos:
             delta = event.pos() - self.last_pos
-            self.town.cam_x -= delta.x() / self.town.scale
-            self.town.cam_y -= delta.y() / self.town.scale
+            self.Town.cam_x -= delta.x() / self.Town.scale
+            self.Town.cam_y -= delta.y() / self.Town.scale
             self.last_pos = event.pos()
             self.update()
 
@@ -62,16 +63,20 @@ class Frame(QMainWindow):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
-        self.town.draw(painter, self.size())
+        t = time()
+        self.Town.draw(painter, self.size())
+        print(time() - t)
 
 
 if __name__ == '__main__':
     app = QApplication([])
-    med_town = town.Town()
-    frame = Frame(med_town, QSize(1200, 900))
+    town = Town.Town()
+    frame = Frame(town, QSize(1200, 900))
+    frame.showMaximized()
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('empty_block'))))
-    town.Building(32, 64, 0, med_town, town.building_type1)
-    town.Building(64, 64, 270, med_town, town.building_type2)
+    for i in range(5):
+        for j in range(5):
+            Town.Building(3 * i, 3 * j, (i * 90) % 360, town, Town.building_type2)
     frame.show()
     app.exec_()

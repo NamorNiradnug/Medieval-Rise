@@ -9,7 +9,7 @@ class Block:
         self.sides = {i: getImage(name + str(i)) for i in range(0, 360, 90)}
 
     def draw(self, x: float, y: float, scale: float, angle: int, painter: QPainter) -> None:
-        painter.drawImage(x * scale, y * scale, self.sides[angle])
+        painter.drawImage(x - 55, y - 64, self.sides[angle])
 
 
 class BlocksManager:
@@ -28,8 +28,10 @@ class Ground:
     def __init__(self, name: str):
         self.image = getImage(name)
 
-    def draw(self, x: float, y: float, scale: float, painter: QPainter) -> None:
-        painter.drawImage(x * scale, y * scale, self.image)
+    def draw(self, x: float, y: float, scale: float, painter: QPainter, size: QSize) -> None:
+        if -55 * scale <= x * scale <= size.width() + 55 * scale and \
+           -64 * scale <= y * scale <= size.height():
+            painter.drawImage(x - 55, y, self.image)
 
 
 class GroundsManager:
@@ -48,28 +50,28 @@ class Chunk:
     """Store data of blocks in 16 by 16 square"""
 
     def __init__(self, x: int, y: int):
-        self.x = x
-        self.y = y
+        self.x = x * 16
+        self.y = y * 16
         # Generate matrix 16 by 16 by 3.
         self.blocks = tuple([tuple([[None, None, None]
                                     for j in range(16)]) for i in range(16)])
         self.grounds = tuple([[Grounds.grass for j in range(16)] for i in range(16)])
 
-    def draw(self, painter: QPainter, x: int, y: int, scale: float = 1) -> None:
-        # for i in range(16):
-            # for j in range(16):
-                #self.grounds[i][j].draw((self.x + i) * 111 - x, (self.y + j) * 56 - y, scale, painter)
+    def draw(self, painter: QPainter, x: int, y: int, size: QSize, scale: float = 1) -> None:
+        for i in range(16):
+            for j in range(16):
+                self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x, (self.x + self.y + i + j)
+                                        * 32 - y, scale, painter, size)
         # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
             for j in range(16):
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
-                        # FIXME drawing of buildings!!!!!
                         block, angle = building.getBlock(i + 16 * self.x,
                                                          j + 16 * self.y, z)
-                        block.draw((self.x + i) * 111 - x, ((self.y + j) * 128 - z * 64 - y),
-                                   scale, angle, painter)
+                        block.draw((self.x + i - self.y - j) * 55 - x, (self.x + self.y + i + j)
+                                   * 32 - z * 64 - y, scale, angle, painter)
 
 
 class TownObjectType:
@@ -101,7 +103,8 @@ class TownObject:
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
         super().__init__(x, y, angle, town, building_type)
-        self.blocks = self.object_type.blocks
+        self.building_type = building_type
+        self.blocks = self.building_type.blocks
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
@@ -115,7 +118,7 @@ class Town:
     def __init__(self):
         self.cam_x = 0  # |
         self.cam_y = 0  # | - position of camera.
-        self.scale = .5
+        self.scale = 1
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
@@ -126,6 +129,5 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if 0 <= chunk.x * 128 * self.scale <= size.width() + 128 * self.scale and \
-                   0 <= chunk.y * 128 * self.scale <= size.height() + 128 * self.scale:
-                    chunk.draw(painter, self.cam_x, self.cam_y)
+                # if -55 * 16 <= (chunk.x - chunk.y) * 55 - self.cam_x * self.scale <= size.width() + 55 * 16:
+                chunk.draw(painter, self.cam_x, self.cam_y, size, self.scale)
