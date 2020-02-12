@@ -34,7 +34,7 @@ class Frame(QMainWindow):
         self.draw_thread = Interval(1 / 60, self.update)
         self.draw_thread.start()
 
-        self.Town = town
+        self.town = town
 
         self.press_pos = None
 
@@ -52,8 +52,8 @@ class Frame(QMainWindow):
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.last_pos:
             delta = event.pos() - self.last_pos
-            self.Town.cam_x -= delta.x() / self.Town.scale
-            self.Town.cam_y -= delta.y() / self.Town.scale
+            self.town.cam_x -= delta.x() / self.town.scale
+            self.town.cam_y -= delta.y() / self.town.scale
             self.last_pos = event.pos()
             self.update()
 
@@ -64,14 +64,14 @@ class Frame(QMainWindow):
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         t = time()
-        self.Town.draw(painter, self.size())
+        self.town.draw(painter, self.size())
         print(time() - t)
 
 
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
-    frame = Frame(town, QSize(1200, 900))
+    frame = Frame(town)
     frame.showMaximized()
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('empty_block'))))

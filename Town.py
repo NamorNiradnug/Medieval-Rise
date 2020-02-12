@@ -118,7 +118,7 @@ class Town:
     def __init__(self):
         self.cam_x = 0  # |
         self.cam_y = 0  # | - position of camera.
-        self.scale = 1
+        self.scale = .5
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
