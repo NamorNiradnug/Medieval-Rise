@@ -66,9 +66,8 @@ class Chunk:
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
-                        # FIXME em, bug.
-                        block, angle = building.getBlock(i + 16 * self.x,
-                                                         j + 16 * self.y, z)
+                        block, angle = building.getBlock(i + self.x,
+                                                         j + self.y, z)
                         block.draw((self.x + i - self.y - j) * 55 - x,
                                    (self.x + self.y + i + j) * 32 - z * 64 - y, angle, painter)
 
@@ -111,6 +110,7 @@ class Building(TownObject):
                     town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def getBlock(self, x: int, y: int, z: int) -> (Block, int):
+        print(x, y, self.x, self.y)
         return self.blocks[x - self.x][y - self.y][z], self.angle
 
 

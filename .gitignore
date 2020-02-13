@@ -130,3 +130,6 @@ dmypy.json
 
 # Wing Project
 *.wp*
+
+# VS Code
+.vscode/

@@ -37,7 +37,7 @@ class Frame(QMainWindow):
         self.town = town
 
         self.last_pos = None
-        self.builded_number = 5
+        self.builded_number = 0
 
     def setSize(self, size: QSize) -> None:
         QMainWindow.setGeometry(self, QRect(QApplication.desktop().screenGeometry().center()
@@ -81,9 +81,5 @@ if __name__ == '__main__':
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
-    Town.Building(18, 0, 180, town, Town.building_type1)
-    for i in range(16):
-        for j in range(16):
-            print(i, j, town.chunks[1][0].blocks[i][j])
     frame.show()
     app.exec_()
