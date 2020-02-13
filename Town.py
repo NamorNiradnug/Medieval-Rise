@@ -1,5 +1,5 @@
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.Qt import QImage, QSize
+from PyQt5.Qt import QImage, QSize, QPoint, QWheelEvent
 
 from resources_manager import getImage
 
@@ -125,9 +125,21 @@ class Town:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
     def draw(self, painter: QPainter, size: QSize) -> None:
+        x = int(self.cam_x - (self.cam_z * size.width()) // 2)
+        y = int(self.cam_y - (self.cam_z * size.height()) // 2)
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if -880 < ((chunk.x - chunk.y) * 55 - self.cam_x) * self.scale < size.width() + 880 and \
-                   -1024 < ((chunk.x + chunk.y) * 32 - self.cam_y) * self.scale < size.height():
-                    chunk.draw(painter, self.cam_x, self.cam_y)
+                if -880 < ((chunk.x - chunk.y) * 55 - x) * self.scale < size.width() + 880 and \
+                   -1024 < ((chunk.x + chunk.y) * 32 - y) * self.scale < size.height():
+                    chunk.draw(painter, x, y)
+
+    def scaleByEvent(self, event: QWheelEvent) -> None:
+        delta = - event.angleDelta().y() / (self.scale * 480)
+        if .5 <= self.cam_z + delta <= 2.5:
+            self.cam_z += delta
+            self.scale = 1 / self.cam_z
+
+    def translate(self, delta: QPoint) -> None:
+        self.cam_x -= int(delta.x() * self.cam_z)
+        self.cam_y -= int(delta.y() * self.cam_z)

@@ -1,10 +1,9 @@
 from types import FunctionType
 from threading import Thread, Event
-from time import time
 
 from PyQt5.QtCore import QRect, QSize, QPoint, QRectF, Qt
 from PyQt5.QtGui import (QPainter, QIcon, QImage, QPixmap,
-                         QMouseEvent, QCloseEvent, QPaintEvent)
+                         QMouseEvent, QCloseEvent, QPaintEvent, QWheelEvent)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
@@ -20,7 +19,7 @@ class Interval(Thread):
 
     def run(self):
         while not self.stopped.wait(self.interval):
-            self.func
+            self.func()
 
     def cancel(self):
         self.stopped.set()
@@ -49,18 +48,18 @@ class Frame(QMainWindow):
         if event.button() == Qt.RightButton:
             self.last_pos = event.pos()
 
+    def wheelEvent(self, event: QWheelEvent):
+        self.town.scaleByEvent(event)
+
     def mouseMoveEvent(self, event: QMouseEvent):
         if self.last_pos:
             delta = event.pos() - self.last_pos
-            self.town.cam_x -= delta.x() * self.town.cam_z
-            self.town.cam_y -= delta.y() * self.town.cam_z
+            self.town.translate(delta)
             self.last_pos = event.pos()
-            self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.RightButton:
             self.last_pos = None
-
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
@@ -72,11 +71,12 @@ if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
     frame = Frame(town)
-    frame.showMaximized()
+    frame.show()
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
     for i in range(5):
         for j in range(5):
-            Town.Building(3 * i, 3 * j, (i * 90) % 360, town, Town.building_type2)
+            Town.Building(3 * i, 3 * j, (i * 90) %
+                          360, town, Town.building_type2)
     frame.show()
     app.exec_()
