@@ -3,7 +3,8 @@ from threading import Thread, Event
 
 from PyQt5.QtCore import QRect, QSize, QPoint, QRectF, Qt
 from PyQt5.QtGui import (QPainter, QIcon, QImage, QPixmap,
-                         QMouseEvent, QCloseEvent, QPaintEvent, QWheelEvent)
+                         QMouseEvent, QCloseEvent, QPaintEvent, 
+                         QWheelEvent, QKeyEvent)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
@@ -36,6 +37,7 @@ class Frame(QMainWindow):
         self.town = town
 
         self.last_pos = None
+        self.builded_number = 5
 
     def setSize(self, size: QSize) -> None:
         QMainWindow.setGeometry(self, QRect(QApplication.desktop().screenGeometry().center()
@@ -61,6 +63,12 @@ class Frame(QMainWindow):
         if event.button() == Qt.RightButton:
             self.last_pos = None
 
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == ord('B'):
+            Town.Building(2 * self.builded_number, 0, (self.builded_number * 90) % 360, 
+                            self.town, Town.building_type1)
+            self.builded_number += 1
+
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         self.town.draw(painter, self.size())
@@ -71,12 +79,11 @@ if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
     frame = Frame(town)
-    frame.show()
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
-    for i in range(5):
-        for j in range(5):
-            Town.Building(3 * i, 3 * j, (i * 90) %
-                          360, town, Town.building_type2)
+    Town.Building(18, 0, 180, town, Town.building_type1)
+    for i in range(16):
+        for j in range(16):
+            print(i, j, town.chunks[1][0].blocks[i][j])
     frame.show()
     app.exec_()

@@ -66,6 +66,7 @@ class Chunk:
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
+                        # FIXME em, bug.
                         block, angle = building.getBlock(i + 16 * self.x,
                                                          j + 16 * self.y, z)
                         block.draw((self.x + i - self.y - j) * 55 - x,
@@ -91,7 +92,7 @@ building_type2 = BuildingType((((Blocks.block, Blocks.block), (Blocks.block, )),
 
 
 class TownObject:
-    def __init__(self, x: int, y: int, angle: int, town, object_type: TownObjectType):
+    def __init__(self, x: int, y: int, angle: int, object_type: TownObjectType):
         self.x = x
         self.y = y
         self.angle = angle
@@ -100,9 +101,10 @@ class TownObject:
 
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
-        super().__init__(x, y, angle, town, building_type)
+        super().__init__(x, y, angle, building_type)
         self.building_type = building_type
         self.blocks = self.building_type.blocks
+        town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
@@ -119,6 +121,7 @@ class Town:
         self.cam_z = 2  # |
         self.scale = .5
         # Generate 256 initial chunks.
+        self.buildings = []
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
