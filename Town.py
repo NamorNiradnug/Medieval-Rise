@@ -53,7 +53,8 @@ class Chunk:
         # Generate matrix 16 by 16 by 3.
         self.blocks = tuple([tuple([[None, None, None]
                                     for j in range(16)]) for i in range(16)])
-        self.grounds = tuple([[Grounds.grass for j in range(16)] for i in range(16)])
+        self.grounds = tuple([[Grounds.grass for j in range(16)]
+                              for i in range(16)])
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         for i in range(16):
@@ -87,7 +88,8 @@ class BuildingType:
 
 
 building_type1 = BuildingType((((Blocks.block,),),))
-building_type2 = BuildingType((((Blocks.block, Blocks.block), (Blocks.block, )),))
+building_type2 = BuildingType(
+    (((Blocks.block, Blocks.block), (Blocks.block, )),))
 
 
 class TownObject:
@@ -110,7 +112,6 @@ class Building(TownObject):
                     town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def getBlock(self, x: int, y: int, z: int) -> (Block, int):
-        print(x, y, self.x, self.y)
         return self.blocks[x - self.x][y - self.y][z], self.angle
 
 

@@ -3,12 +3,17 @@ from threading import Thread, Event
 
 from PyQt5.QtCore import QRect, QSize, QPoint, QRectF, Qt
 from PyQt5.QtGui import (QPainter, QIcon, QImage, QPixmap,
-                         QMouseEvent, QCloseEvent, QPaintEvent, 
+                         QMouseEvent, QCloseEvent, QPaintEvent,
                          QWheelEvent, QKeyEvent)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
 from resources_manager import getImage
+
+
+def isPointInRect(point: QPoint, rect: (float, float, QSize)) -> bool:
+    return rect[0] <= point.x() <= rect[0] + rect[2].width() and \
+        rect[1] <= point.y() <= rect[1] + rect[2].height()
 
 
 class Interval(Thread):
@@ -30,9 +35,12 @@ class Frame(QMainWindow):
     def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
         super().__init__()
         self.setSize(size)
+        self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
+        self.check_thead = Interval(.1, self.checkForMoving)
         self.draw_thread.start()
+        self.check_thead.start()
 
         self.town = town
 
@@ -64,15 +72,20 @@ class Frame(QMainWindow):
             self.last_pos = None
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == ord('B'):
-            Town.Building(2 * self.builded_number, 0, (self.builded_number * 90) % 360, 
-                            self.town, Town.building_type1)
+        if event.key() == ord('B') and self.builded_number <= 81:
+            Town.Building(3 * self.builded_number, 1, (self.builded_number * 90) % 360,
+                          self.town, Town.building_type2)
             self.builded_number += 1
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         self.town.draw(painter, self.size())
         painter.end()
+    
+    def checkForMoving(self):
+        print(0)
+        if not isPointInRect(self.cursor.pos(), (10, 10, self.size() - QSize(10, 10))):
+            print(1)
 
 
 if __name__ == '__main__':
