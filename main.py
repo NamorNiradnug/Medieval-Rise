@@ -11,9 +11,9 @@ import Town
 from resources_manager import getImage
 
 
-def isPointInRect(point: QPoint, rect: (float, float, QSize)) -> bool:
-    return rect[0] <= point.x() <= rect[0] + rect[2].width() and \
-        rect[1] <= point.y() <= rect[1] + rect[2].height()
+def isPointInRect(point: QPoint, rect: (QPoint, QSize)) -> bool:
+    return rect[0].x() <= point.x() <= rect[0].x() + rect[1].width() and \
+        rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
 
 
 class Interval(Thread):
@@ -38,7 +38,7 @@ class Frame(QMainWindow):
         self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
-        self.check_thead = Interval(.1, self.checkForMoving)
+        self.check_thead = Interval(1 / 20, self.checkForMoving)
         self.draw_thread.start()
         self.check_thead.start()
 
@@ -48,11 +48,11 @@ class Frame(QMainWindow):
         self.builded_number = 0
 
     def setSize(self, size: QSize) -> None:
-        QMainWindow.setGeometry(self, QRect(QApplication.desktop().screenGeometry().center()
-                                            - QPoint(size.width(), size.height()) / 2, size))
+        self.resize(size.width(), size.height())
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
+        self.check_thead.cancel()
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.RightButton:
@@ -81,11 +81,14 @@ class Frame(QMainWindow):
         painter = QPainter(self)
         self.town.draw(painter, self.size())
         painter.end()
-    
+
     def checkForMoving(self):
-        print(0)
-        if not isPointInRect(self.cursor.pos(), (10, 10, self.size() - QSize(10, 10))):
-            print(1)
+        cursor_pos = self.cursor().pos()
+        if (self.isMaximized() or self.isFullScreen()) and \
+            not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
+            self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 20
+            self.town.cam_y += (cursor_pos.y() - self.size().height() // 2) / 17
+            
 
 
 if __name__ == '__main__':
@@ -94,5 +97,5 @@ if __name__ == '__main__':
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
-    frame.show()
+    frame.showFullScreen()
     app.exec_()

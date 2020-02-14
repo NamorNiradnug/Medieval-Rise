@@ -56,7 +56,7 @@ class Chunk:
         self.grounds = tuple([[Grounds.grass for j in range(16)]
                               for i in range(16)])
 
-    def draw(self, painter: QPainter, x: int, y: int) -> None:
+    def draw(self, painter: QPainter, x: float, y: float) -> None:
         for i in range(16):
             for j in range(16):
                 self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x,
@@ -103,6 +103,7 @@ class TownObject:
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
         super().__init__(x, y, angle, building_type)
+        # TODO angle must turne all blocks!
         self.building_type = building_type
         self.blocks = self.building_type.blocks
         town.buildings.append(self)
@@ -129,8 +130,8 @@ class Town:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
     def draw(self, painter: QPainter, size: QSize) -> None:
-        x = int(self.cam_x - (self.cam_z * size.width()) // 2)
-        y = int(self.cam_y - (self.cam_z * size.height()) // 2)
+        x = self.cam_x - (self.cam_z * size.width()) // 2
+        y = self.cam_y - (self.cam_z * size.height()) // 2
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
@@ -145,5 +146,5 @@ class Town:
             self.scale = 1 / self.cam_z
 
     def translate(self, delta: QPoint) -> None:
-        self.cam_x -= int(delta.x() * self.cam_z)
-        self.cam_y -= int(delta.y() * self.cam_z)
+        self.cam_x -= delta.x() * self.cam_z
+        self.cam_y -= delta.y() * self.cam_z
