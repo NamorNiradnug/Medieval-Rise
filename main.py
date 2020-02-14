@@ -38,7 +38,7 @@ class Frame(QMainWindow):
         self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
-        self.check_thead = Interval(1 / 20, self.checkForMoving)
+        self.check_thead = Interval(1 / 40, self.checkForMoving)
         self.draw_thread.start()
         self.check_thead.start()
 
@@ -73,7 +73,7 @@ class Frame(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == ord('B') and self.builded_number <= 81:
-            Town.Building(3 * self.builded_number, 1, (self.builded_number * 90) % 360,
+            Town.Building(4 * self.builded_number, 1, (self.builded_number * 90) % 360,
                           self.town, Town.building_type2)
             self.builded_number += 1
 
@@ -82,13 +82,13 @@ class Frame(QMainWindow):
         self.town.draw(painter, self.size())
         painter.end()
 
-    def checkForMoving(self):
+    def checkForMoving(self) -> None:
         cursor_pos = self.cursor().pos()
         if (self.isMaximized() or self.isFullScreen()) and \
                 not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
-            self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 20
+            self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 40
             self.town.cam_y += (cursor_pos.y() -
-                                self.size().height() // 2) / 17
+                                self.size().height() // 2) / 34
 
 
 if __name__ == '__main__':

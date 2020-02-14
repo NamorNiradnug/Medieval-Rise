@@ -89,7 +89,7 @@ class BuildingType:
 
 building_type1 = BuildingType((((Blocks.block,),),))
 building_type2 = BuildingType(
-    (((Blocks.block, Blocks.block), (Blocks.block, )),))
+    (((Blocks.block,),), ((Blocks.block, Blocks.block), (Blocks.block, )),))
 
 
 class TownObject:
@@ -105,7 +105,11 @@ class Building(TownObject):
         super().__init__(x, y, angle, building_type)
         # TODO angle must turne all blocks!
         self.building_type = building_type
-        self.blocks = self.building_type.blocks
+        if angle == 0:
+            self.blocks = self.building_type.blocks
+        else:
+            self.blocks = tuple([self.building_type.blocks[i][::-1]
+            for i in range(len(self.building_type.blocks))])[::-1]
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
