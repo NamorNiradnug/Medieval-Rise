@@ -135,8 +135,8 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if -880 < ((chunk.x - chunk.y) * 55 - x) * self.scale < size.width() + 880 and \
-                   -1024 < ((chunk.x + chunk.y) * 32 - y) * self.scale < size.height():
+                if -880 < ((chunk.x - chunk.y) * 55 - x) < size.width() * self.cam_z + 880 and \
+                   -1024 < ((chunk.x + chunk.y) * 32 - y) < size.height() * self.cam_z:
                     chunk.draw(painter, x, y)
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
