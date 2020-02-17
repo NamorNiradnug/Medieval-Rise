@@ -72,11 +72,17 @@ class Frame(QMainWindow):
             self.last_pos = None
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key_B and self.builded_number <= 81:
+        event_key = event.key()
+        if event_key == Qt.Key_B and self.builded_number <= 81:
             Town.Building(4 * self.builded_number, 1, (self.builded_number * 90) % 360,
                           self.town, Town.building_type2)
             self.builded_number += 1
-        if event.key() == Qt.Key_Escape:
+
+        if event_key == Qt.Key_D and self.builded_number >= 1:
+            self.town.buildings[-1].destroy()
+            self.builded_number -= 1
+
+        if event_key == Qt.Key_Escape:
             if self.isFullScreen():
                 self.showMaximized()
             else:

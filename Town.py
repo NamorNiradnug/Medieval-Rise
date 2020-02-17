@@ -97,36 +97,46 @@ building_type2 = BuildingType(
 
 
 class TownObject:
-    def __init__(self, x: int, y: int, angle: int, object_type: TownObjectType):
+    def __init__(self, x: int, y: int, angle: int, town, object_type: TownObjectType):
         self.x = x
         self.y = y
         self.angle = angle
+        self.town = town
         self.object_type = object_type
 
 
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
-        super().__init__(x, y, angle, building_type)
+        super().__init__(x, y, angle, town, building_type)
         # TODO angle must turn all blocks!
         self.building_type = building_type
         if angle == 0:
-            self.blocks = self.building_type.blocks
+            self.blocks = building_type.blocks
         elif angle == 90:
             # blocks[i][j] is building_type.blocks[j][i]
-            self.blocks = tuple([tuple([self.building_type.blocks[j][i] for j in range(len(self.building_type.blocks))])
-                                 for i in range(self.building_type.height)])
+            self.blocks = tuple([tuple([building_type.blocks[j][i] for j in range(len(building_type.blocks))])
+                                 for i in range(building_type.height)])
         elif angle == 180:
-            self.blocks = tuple([self.building_type.blocks[i][::-1]
-                                 for i in range(len(self.building_type.blocks))])[::-1]
+            self.blocks = tuple([building_type.blocks[i][::-1]
+                                 for i in range(len(building_type.blocks))])[::-1]
         elif angle == 270:
-            self.blocks = tuple([tuple([self.building_type.blocks[-j - 1][-i - 1] for j in range(len(self.building_type.blocks))])
-                                 for i in range(self.building_type.height)])
+            self.blocks = tuple([tuple([building_type.blocks[-j - 1][-i - 1] for j in range(len(building_type.blocks))])
+                                 for i in range(building_type.height)])
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     if self.blocks[block_x][block_y][block_z] is not None:
                         town.addBlock(x + block_x, y + block_y, block_z, self)
+
+    def destroy(self):
+        for block_x in range(len(self.blocks)):
+            for block_y in range(len(self.blocks[block_x])):
+                for block_z in range(len(self.blocks[block_x][block_y])):
+                    self.town.removeBlock(
+                        self.x + block_x, self.y + block_y, block_z)
+        self.town.buildings.remove(self)
+        del self
 
     def getBlock(self, x: int, y: int, z: int) -> (Block, int):
         return self.blocks[x - self.x][y - self.y][z], self.angle
@@ -144,6 +154,9 @@ class Town:
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
+
+    def removeBlock(self, x: int, y: int, z: int) -> None:
+        self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
 
     def draw(self, painter: QPainter, size: QSize) -> None:
         x = self.cam_x - (self.cam_z * size.width()) // 2
