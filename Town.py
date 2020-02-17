@@ -85,15 +85,14 @@ class BuildingType:
 
     def __init__(self, blocks: (((Block, ...), ...), ...)):
         self.height = max([len(blocks_y) for blocks_y in blocks])
-        # make blocks
+        # convert blocks to rectangular matrix
         self.blocks = tuple([blocks_y + ((None,), ) * (self.height - len(blocks_y))
                              for blocks_y in blocks])
 
 
 building_type1 = BuildingType((((Blocks.block,),),))
 building_type2 = BuildingType(
-    (((Blocks.block,),),
-     ((Blocks.block, Blocks.block), (Blocks.block,)))
+    (((Blocks.block, Blocks.block), (Blocks.block,)),)
 )
 
 
@@ -112,12 +111,16 @@ class Building(TownObject):
         self.building_type = building_type
         if angle == 0:
             self.blocks = self.building_type.blocks
+        elif angle == 90:
+            # blocks[i][j] is building_type.blocks[j][i]
+            self.blocks = tuple([tuple([self.building_type.blocks[j][i] for j in range(len(self.building_type.blocks))])
+                                 for i in range(self.building_type.height)])
         elif angle == 180:
             self.blocks = tuple([self.building_type.blocks[i][::-1]
                                  for i in range(len(self.building_type.blocks))])[::-1]
-        else:
-            self.blocks = tuple([tuple([self.building_type.blocks[j][i] for j in range(self.building_type.height)])
-                                 for i in range(len(self.building_type.blocks))])
+        elif angle == 270:
+            self.blocks = tuple([tuple([self.building_type.blocks[-j - 1][-i - 1] for j in range(len(self.building_type.blocks))])
+                                 for i in range(self.building_type.height)])
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
