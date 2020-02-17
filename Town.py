@@ -84,12 +84,17 @@ class BuildingType:
     """Store information about some building type."""
 
     def __init__(self, blocks: (((Block, ...), ...), ...)):
-        self.blocks = blocks
+        self.height = max([len(blocks_y) for blocks_y in blocks])
+        # make blocks
+        self.blocks = tuple([blocks_y + ((None,), ) * (self.height - len(blocks_y))
+                             for blocks_y in blocks])
 
 
 building_type1 = BuildingType((((Blocks.block,),),))
 building_type2 = BuildingType(
-    (((Blocks.block,),), ((Blocks.block, Blocks.block), (Blocks.block, )),))
+    (((Blocks.block,),),
+     ((Blocks.block, Blocks.block), (Blocks.block,)))
+)
 
 
 class TownObject:
@@ -103,18 +108,22 @@ class TownObject:
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
         super().__init__(x, y, angle, building_type)
-        # TODO angle must turne all blocks!
+        # TODO angle must turn all blocks!
         self.building_type = building_type
         if angle == 0:
             self.blocks = self.building_type.blocks
-        else:
+        elif angle == 180:
             self.blocks = tuple([self.building_type.blocks[i][::-1]
-            for i in range(len(self.building_type.blocks))])[::-1]
+                                 for i in range(len(self.building_type.blocks))])[::-1]
+        else:
+            self.blocks = tuple([tuple([self.building_type.blocks[j][i] for j in range(self.building_type.height)])
+                                 for i in range(len(self.building_type.blocks))])
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
-                    town.addBlock(x + block_x, y + block_y, block_z, self)
+                    if self.blocks[block_x][block_y][block_z] is not None:
+                        town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def getBlock(self, x: int, y: int, z: int) -> (Block, int):
         return self.blocks[x - self.x][y - self.y][z], self.angle

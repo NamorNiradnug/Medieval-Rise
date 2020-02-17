@@ -84,7 +84,7 @@ class Frame(QMainWindow):
 
     def checkForMoving(self) -> None:
         cursor_pos = self.cursor().pos()
-        if (self.isMaximized() or self.isFullScreen()) and \
+        if self.last_pos is None and (self.isMaximized() or self.isFullScreen()) and \
                 not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
             self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 40
             self.town.cam_y += (cursor_pos.y() -
