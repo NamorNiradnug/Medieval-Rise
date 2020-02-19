@@ -1,10 +1,9 @@
+from threading import Event, Thread
 from types import FunctionType
-from threading import Thread, Event
 
-from PyQt5.QtCore import QRect, QSize, QPoint, QRectF, Qt
-from PyQt5.QtGui import (QPainter, QIcon, QImage, QPixmap,
-                         QMouseEvent, QCloseEvent, QPaintEvent,
-                         QWheelEvent, QKeyEvent)
+from PyQt5.QtCore import QPoint, QRect, QRectF, QSize, Qt
+from PyQt5.QtGui import (QCloseEvent, QIcon, QImage, QKeyEvent, QMouseEvent,
+                         QPainter, QPaintEvent, QPixmap, QWheelEvent)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
@@ -38,14 +37,16 @@ class Frame(QMainWindow):
         self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
-        self.check_thead = Interval(1 / 40, self.checkForMoving)
+        self.check_thead = Interval(1 / 40, self.mousePositionEvent)
         self.draw_thread.start()
         self.check_thead.start()
 
         self.town = town
 
         self.last_pos = None
-        self.builded_number = 0
+        self.choosen_building = None
+        self.choosen_building_angle = None
+        self.mode = 'town'
 
     def setSize(self, size: QSize) -> None:
         self.resize(size.width(), size.height())
@@ -71,16 +72,29 @@ class Frame(QMainWindow):
         if event.button() == Qt.RightButton:
             self.last_pos = None
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyReleaseEvent(self, event: QKeyEvent):
         event_key = event.key()
-        if event_key == Qt.Key_B and self.builded_number <= 81:
-            Town.Building(4 * self.builded_number, 1, (self.builded_number * 90) % 360,
-                          self.town, Town.building_type2)
-            self.builded_number += 1
 
-        if event_key == Qt.Key_D and self.builded_number >= 1:
-            self.town.buildings[-1].destroy()
-            self.builded_number -= 1
+        if event_key == Qt.Key_B:
+            self.mode = 'town_builder'
+            self.choosen_building = Town.ProjectedBuilding(Town.building_type2)
+            self.choosen_building_angle = 0
+
+        if event_key == Qt.Key_Right:
+            if self.mode == 'town_builder':
+                self.choosen_building_angle = (
+                    self.choosen_building_angle + 90) % 360
+
+        if event_key == Qt.Key_Left:
+            if self.mode == 'town_builder':
+                self.choosen_building_angle = (
+                    self.choosen_building_angle - 90) % 360
+
+        if event_key == Qt.Key_D:
+            if self.mode == 'town_builder':
+                self.choosen_building.destroy()
+                self.choosen_building = None
+                self.mode = 'town'
 
         if event_key == Qt.Key_Escape:
             if self.isFullScreen():
@@ -91,10 +105,18 @@ class Frame(QMainWindow):
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         self.town.draw(painter, self.size())
+
+        if self.mode == 'town_builder' and self.choosen_building:
+            # TODO not take global cursor position
+            cursor_pos = self.cursor().pos()
+            self.choosen_building.draw(cursor_pos.x(), cursor_pos.y(), self.choosen_building_angle,
+                                       painter)
+
         painter.end()
 
-    def checkForMoving(self) -> None:
+    def mousePositionEvent(self) -> None:
         cursor_pos = self.cursor().pos()
+
         if self.last_pos is None and (self.isMaximized() or self.isFullScreen()) and \
                 not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
             self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 40
@@ -105,8 +127,9 @@ class Frame(QMainWindow):
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
+    Town.Building(1, 1, 0, town, Town.building_type2)
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
-    frame.showFullScreen()
+    frame.show()
     app.exec_()

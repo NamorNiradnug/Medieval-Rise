@@ -1,5 +1,5 @@
+from PyQt5.Qt import QImage, QPoint, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.Qt import QImage, QSize, QPoint, QWheelEvent
 
 from resources_manager import getImage
 
@@ -13,6 +13,9 @@ class Block:
 
 
 class BlocksManager:
+    """Store all blocks.
+        Use Blocks.block_name to get Block(block_name)."""
+
     blocks = {name: Block(name) for name in ('block', )}
 
     def __getattr__(self, item):
@@ -33,6 +36,9 @@ class Ground:
 
 
 class GroundsManager:
+    """Store all grounds.
+        Use Grounds.ground_name to get Ground(ground_name)."""
+
     grounds = {name: Ground(name) for name in ('grass', )}
 
     def __getattr__(self, item):
@@ -57,10 +63,12 @@ class Chunk:
                               for i in range(16)])
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
+        # Draw all grounds.
         for i in range(16):
             for j in range(16):
                 self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x,
                                         (self.x + self.y + i + j) * 32 - y, painter)
+
         # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
             for j in range(16):
@@ -80,14 +88,37 @@ class TownObjectType:
         pass
 
 
+def matrixHeight(matrix: ((object, ...), ...)) -> int:
+    return max([len(blocks_y) for blocks_y in matrix])
+
+
 class BuildingType:
     """Store information about some building type."""
 
     def __init__(self, blocks: (((Block, ...), ...), ...)):
-        self.height = max([len(blocks_y) for blocks_y in blocks])
+        height = matrixHeight(blocks)
         # convert blocks to rectangular matrix
-        self.blocks = tuple([blocks_y + ((None,), ) * (self.height - len(blocks_y))
+        self.blocks = tuple([blocks_y + ((None,), ) * (height - len(blocks_y))
                              for blocks_y in blocks])
+
+
+def turnBlocks(blocks: (((Block, ...), ...), ...), angle: int) -> (((Block, ...), ...), ...):
+
+    # blocks is rectangular matrix, so its height is len of blocks[0]
+    height = len(blocks[0])
+
+    if angle == 0:
+        return blocks
+    elif angle == 90:
+        # blocks[i][j] is building_type.blocks[j][i]
+        return tuple([tuple([blocks[j][i] for j in range(len(blocks))])
+                      for i in range(height)])
+    elif angle == 180:
+        return tuple([blocks[i][::-1]
+                      for i in range(len(blocks))])[::-1]
+    else:
+        return tuple([tuple([blocks[-j - 1][-i - 1] for j in range(len(blocks))])
+                      for i in range(height)])
 
 
 building_type1 = BuildingType((((Blocks.block,),),))
@@ -98,38 +129,31 @@ building_type2 = BuildingType(
 
 class TownObject:
     def __init__(self, x: int, y: int, angle: int, town, object_type: TownObjectType):
+        if angle not in {0, 90, 180, 270}:
+            raise AttributeError('Angle must be 0, 90, 180 or 270, not', angle)
+
         self.x = x
         self.y = y
         self.angle = angle
         self.town = town
-        self.object_type = object_type
 
 
 class Building(TownObject):
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType):
         super().__init__(x, y, angle, town, building_type)
-        # TODO angle must turn all blocks!
         self.building_type = building_type
-        if angle == 0:
-            self.blocks = building_type.blocks
-        elif angle == 90:
-            # blocks[i][j] is building_type.blocks[j][i]
-            self.blocks = tuple([tuple([building_type.blocks[j][i] for j in range(len(building_type.blocks))])
-                                 for i in range(building_type.height)])
-        elif angle == 180:
-            self.blocks = tuple([building_type.blocks[i][::-1]
-                                 for i in range(len(building_type.blocks))])[::-1]
-        elif angle == 270:
-            self.blocks = tuple([tuple([building_type.blocks[-j - 1][-i - 1] for j in range(len(building_type.blocks))])
-                                 for i in range(building_type.height)])
+
+        self.blocks = turnBlocks(self.building_type.blocks, angle)
+
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     if self.blocks[block_x][block_y][block_z] is not None:
-                        town.addBlock(x + block_x, y + block_y, block_z, self)
+                        town.addBlock(x + block_x, y +
+                                      block_y, block_z, self)
 
-    def destroy(self):
+    def destroy(self) -> None:
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
@@ -140,6 +164,34 @@ class Building(TownObject):
 
     def getBlock(self, x: int, y: int, z: int) -> (Block, int):
         return self.blocks[x - self.x][y - self.y][z], self.angle
+
+
+class ProjectedBuilding:
+    """Building which player's projecting to build."""
+
+    def __init__(self, building_type: BuildingType):
+        self.building_type = building_type
+
+    def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
+        blocks = turnBlocks(self.building_type.blocks, angle)
+        height = len(blocks[0])
+
+        old_painter_opacity = painter.opacity()
+        painter.setOpacity(.7)
+
+        for block_y in range(height):
+            for block_x in range(len(blocks)):
+                for block_z in range(len(blocks[block_x][block_y])):
+                    block = blocks[block_x][block_y][block_z]
+                    if block is not None:
+                        block.draw(x + (block_x - block_y) * 55,
+                                   y + (block_x + block_y) * 32 - block_z * 64,
+                                   angle, painter)
+
+        painter.setOpacity(old_painter_opacity)
+
+    def destroy(self):
+        del self
 
 
 class Town:
@@ -161,12 +213,14 @@ class Town:
     def draw(self, painter: QPainter, size: QSize) -> None:
         x = self.cam_x - (self.cam_z * size.width()) // 2
         y = self.cam_y - (self.cam_z * size.height()) // 2
+
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
                 if -880 < ((chunk.x - chunk.y) * 55 - x) < size.width() * self.cam_z + 880 and \
                    -1024 < ((chunk.x + chunk.y) * 32 - y) < size.height() * self.cam_z:
                     chunk.draw(painter, x, y)
+        painter.scale(self.cam_z, self.cam_z)
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = - event.angleDelta().y() / (self.scale * 480)
