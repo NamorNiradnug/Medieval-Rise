@@ -190,7 +190,12 @@ class ProjectedBuilding:
 
         painter.setOpacity(old_painter_opacity)
 
-    def destroy(self):
+    def build(self, x: int, y: int, angle: int, town) -> None:
+        # x // 55 = town_x - town_y
+        # y // 32 = town_x + town_y
+        pass
+
+    def destroy(self) -> None:
         del self
 
 
