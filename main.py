@@ -106,29 +106,9 @@ class Frame(QMainWindow):
         painter = QPainter(self)
         self.town.draw(painter, self.size())
 
-        print(self.frameSize(), self.height())
-
-        bpos = self.cursor().pos() - self.pos() + \
-            QPoint(self.town.cam_x, self.town.cam_y) * self.town.scale - \
-            QPoint(self.width(), self.height()) * .5
-
-        print(bpos, self.width(), self.height())
-
         if self.mode == 'town_builder':
-            town = self.town
-            bpos = self.cursor().pos() - self.pos() + \
-                QPoint(town.cam_x, town.cam_y) * town.scale
-            print(bpos)
-            painter.scale(town.scale, town.scale)
-            # FIXME rouded drawing of projecting building
-            isometric_x = round(
-                ((bpos.x() / 55) + (bpos.y() / 32)) / (2 * town.scale))
-            isometric_y = round(
-                (- (bpos.x() / 55) + (bpos.y() / 32)) / (2 * town.scale))
-            real_x = (isometric_x - isometric_y) * 55 - town.cam_x
-            real_y = (isometric_x + isometric_y) * 32 - town.cam_y
-            self.choosen_building.draw(
-                real_x, real_y, self.choosen_building_angle, painter)
+            # TODO !!!!
+            pass
 
         painter.end()
 

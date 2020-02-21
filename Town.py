@@ -172,7 +172,8 @@ class ProjectedBuilding:
     def __init__(self, building_type: BuildingType):
         self.building_type = building_type
 
-    def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
+    def draw(self, hx: int, hy: int, angle: int, cam_x: float, cam_y: float,
+             painter: QPainter) -> None:
         blocks = turnBlocks(self.building_type.blocks, angle)
         height = len(blocks[0])
 
@@ -184,8 +185,9 @@ class ProjectedBuilding:
                 for block_z in range(len(blocks[block_x][block_y])):
                     block = blocks[block_x][block_y][block_z]
                     if block is not None:
-                        block.draw(x + (block_x - block_y) * 55,
-                                   y + (block_x + block_y) * 32 - block_z * 64,
+                        block.draw((hx + block_x - block_y - hy) * 55 - cam_x,
+                                   (hx + hy + block_x + block_y) * 32
+                                   - block_z * 64 - cam_y,
                                    angle, painter)
 
         painter.setOpacity(old_painter_opacity)
