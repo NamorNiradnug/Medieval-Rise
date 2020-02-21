@@ -106,9 +106,19 @@ class Frame(QMainWindow):
         painter = QPainter(self)
         self.town.draw(painter, self.size())
 
+        print(self.frameSize(), self.height())
+
+        bpos = self.cursor().pos() - self.pos() + \
+            QPoint(self.town.cam_x, self.town.cam_y) * self.town.scale - \
+            QPoint(self.width(), self.height()) * .5
+
+        print(bpos, self.width(), self.height())
+
         if self.mode == 'town_builder':
             town = self.town
-            bpos = self.cursor().pos() - self.pos() + town.camPos()
+            bpos = self.cursor().pos() - self.pos() + \
+                QPoint(town.cam_x, town.cam_y) * town.scale
+            print(bpos)
             painter.scale(town.scale, town.scale)
             # FIXME rouded drawing of projecting building
             isometric_x = round(
@@ -135,7 +145,7 @@ class Frame(QMainWindow):
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
-    Town.Building(1, 1, 0, town, Town.building_type2)
+    Town.Building(1, 5, 0, town, Town.building_type2)
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))

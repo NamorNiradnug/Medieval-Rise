@@ -201,9 +201,9 @@ class ProjectedBuilding:
 
 class Town:
     def __init__(self):
-        self.cam_x = 0  # |
-        self.cam_y = 0  # | - position of camera.
-        self.cam_z = 2  # |
+        self.cam_x = 0.0  # |
+        self.cam_y = 0.0  # | - position of camera.
+        self.cam_z = 2.0  # |
         self.scale = .5
         # Generate 256 initial chunks.
         self.buildings = []
