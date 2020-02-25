@@ -112,6 +112,29 @@ class BuildingType:
                              for blocks_y in blocks])
 
 
+class BuildingTypeManager:
+
+    building_types = {'building_type1': BuildingType((((Blocks.block,),),)),
+                      'building_type2': BuildingType(
+        (((Blocks.block, Blocks.block), (Blocks.block,)),)
+    )
+    }
+
+    sorted_names = sorted(building_types)
+
+    def getByNumber(self, number: int) -> BuildingType:
+        return self.__getattr__(self.sorted_names[number])
+
+    def __getattr__(self, item: str):
+        if item not in self.building_types:
+            raise AttributeError(f'Building type "{item}" does not exests.')
+
+        return self.building_types[item]
+
+
+BuildingTypes = BuildingTypeManager()
+
+
 def turnBlocks(blocks: (((Block, ...), ...), ...), angle: int) -> (((Block, ...), ...), ...):
     """Turn matrix of Blocks (with angle 0 degrees) on angle (in degrees)"""
 
@@ -130,12 +153,6 @@ def turnBlocks(blocks: (((Block, ...), ...), ...), angle: int) -> (((Block, ...)
     else:
         return tuple([tuple([blocks[-j - 1][-i - 1] for j in range(len(blocks))])
                       for i in range(height)])
-
-
-building_type1 = BuildingType((((Blocks.block,),),))
-building_type2 = BuildingType(
-    (((Blocks.block, Blocks.block), (Blocks.block,)),)
-)
 
 
 class TownObject:

@@ -45,6 +45,7 @@ class Frame(QMainWindow):
 
         self.last_pos = None
         self.choosen_building = None
+        self.choosen_btype = 0
         self.mode = 'town'
 
     def setSize(self, size: QSize) -> None:
@@ -65,7 +66,10 @@ class Frame(QMainWindow):
         if self.last_pos:
             delta = event.pos() - self.last_pos
             self.town.translate(delta)
-            self.choosen_building.move(-delta)
+
+            if self.mode == 'town_builder':
+                self.choosen_building.move(-delta)
+
             self.last_pos = event.pos()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -75,7 +79,7 @@ class Frame(QMainWindow):
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
 
-        # enter...
+        # Enter...
         if event_key == 16777220:
             if self.mode == 'town_builder':
                 self.choosen_building.build()
@@ -85,7 +89,21 @@ class Frame(QMainWindow):
         if event_key == Qt.Key_B:
             self.mode = 'town_builder'
             self.choosen_building = Town.ProjectedBuilding(
-                self.town, Town.building_type2)
+                self.town, Town.BuildingTypes.getByNumber(0))
+
+        if event_key == Qt.Key_Up:
+            if self.mode == 'town_builder':
+                self.choosen_btype = (
+                    self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
+                self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
+                    self.choosen_btype)
+
+        if event_key == Qt.Key_Down:
+            if self.mode == 'town_builder':
+                self.choosen_btype = (
+                    self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
+                self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
+                    self.choosen_btype)
 
         if event_key == Qt.Key_Right:
             if self.mode == 'town_builder':
@@ -126,13 +144,13 @@ class Frame(QMainWindow):
             self.town.cam_y += delta.y()
 
             if self.mode == 'town_builder':
-                self.choosen_building.move(delta)
+                self.choosen_building.move(delta * self.town.scale)
 
 
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
-    Town.Building(1, 5, 0, town, Town.building_type2)
+    Town.Building(1, 5, 0, town, Town.BuildingTypes.building_type2)
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
