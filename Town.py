@@ -7,7 +7,7 @@ from resources_manager import getImage
 def isometric(x: float, y: float) -> QPointF:
     # (iso_x + iso_y) * 32 = x
     # (iso_x - iso_y) * 55 = y
-    return QPointF(((y / 32) + (x / 55)) / 2, ((y / 32) - (x / 55)) / 2)
+    return QPointF(((y / 32) + (x / 55)), ((y / 32) - (x / 55))) / 2
 
 
 def rectangular(iso_x: float, iso_y: float) -> QPointF:
@@ -195,6 +195,7 @@ class Building(TownObject):
 
 
 class ProjectedBuilding:
+    # TODO projected building have to draw UNDER of builded
     """Building which player's projecting to build."""
 
     def __init__(self, town, building_type: BuildingType):
