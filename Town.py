@@ -1,12 +1,22 @@
-from PyQt5.Qt import QImage, QPoint, QSize, QWheelEvent
+from PyQt5.Qt import QImage, QPointF, QPoint, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter, QPen
 
 from resources_manager import getImage
 
 
+def isometric(x: float, y: float) -> QPointF:
+    # (iso_x + iso_y) * 32 = x
+    # (iso_x - iso_y) * 55 = y
+    return QPointF(((y / 32) + (x / 55)) / 2, ((y / 32) - (x / 55)) / 2)
+
+
+def rectangular(iso_x: float, iso_y: float) -> QPointF:
+    return QPointF((iso_x - iso_y) * 55, (iso_x + iso_y) * 32)
+
+
 class Block:
     def __init__(self, name: str):
-        self.sides = {i: getImage(name + str(i)) for i in range(0, 360, 90)}
+        self.sides = {i: getImage(f'{name}{i}') for i in range(0, 360, 90)}
 
     def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
         painter.drawImage(x - 55, y - 64, self.sides[angle])
@@ -21,7 +31,7 @@ class BlocksManager:
     def __getattr__(self, item):
         if item in self.blocks:
             return self.blocks[item]
-        raise AttributeError('Block "' + item + '" does not exist.')
+        raise AttributeError(f'Block "{item}" does not exist.')
 
 
 Blocks = BlocksManager()
@@ -44,7 +54,7 @@ class GroundsManager:
     def __getattr__(self, item):
         if item in self.grounds:
             return self.grounds[item]
-        raise AttributeError('Ground "' + item + '" does not exist.')
+        raise AttributeError(f'Ground "{item}" does not exist.')
 
 
 Grounds = GroundsManager()
@@ -103,6 +113,7 @@ class BuildingType:
 
 
 def turnBlocks(blocks: (((Block, ...), ...), ...), angle: int) -> (((Block, ...), ...), ...):
+    """Turn matrix of Blocks (with angle 0 degrees) on angle (in degrees)"""
 
     # blocks is rectangular matrix, so its height is len of blocks[0]
     height = len(blocks[0])
@@ -169,15 +180,20 @@ class Building(TownObject):
 class ProjectedBuilding:
     """Building which player's projecting to build."""
 
-    def __init__(self, building_type: BuildingType):
+    def __init__(self, town, building_type: BuildingType):
         self.building_type = building_type
+        self.town = town
+        self.isometric = isometric(
+            town.cam_x, town.cam_y)
+        self.angle = 0
 
-    def draw(self, hx: int, hy: int, angle: int, cam_x: float, cam_y: float,
-             painter: QPainter) -> None:
-        blocks = turnBlocks(self.building_type.blocks, angle)
+    def draw(self, painter: QPainter, screen_size: QSize) -> None:
+        blocks = turnBlocks(self.building_type.blocks, self.angle)
         height = len(blocks[0])
+        iso_x = round(self.isometric.x())
+        iso_y = round(self.isometric.y())
 
-        old_painter_opacity = painter.opacity()
+        painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.7)
 
         for block_y in range(height):
@@ -185,28 +201,33 @@ class ProjectedBuilding:
                 for block_z in range(len(blocks[block_x][block_y])):
                     block = blocks[block_x][block_y][block_z]
                     if block is not None:
-                        block.draw((hx + block_x - block_y - hy) * 55 - cam_x,
-                                   (hx + hy + block_x + block_y) * 32
-                                   - block_z * 64 - cam_y,
-                                   angle, painter)
+                        block.draw((iso_x + block_x - block_y - iso_y) * 55 -
+                                   self.town.cam_x + self.town.cam_z * screen_size.width() / 2,
+                                   (iso_x + iso_y + block_x + block_y) * 32 -
+                                   block_z * 64 - self.town.cam_y + screen_size.height() * self.town.cam_z / 2,
+                                   self.angle, painter)
 
-        painter.setOpacity(old_painter_opacity)
-
-    def build(self, x: int, y: int, angle: int, town) -> None:
-        # x // 55 = town_x - town_y
-        # y // 32 = town_x + town_y
-        pass
+    def build(self) -> None:
+        Building(round(self.isometric.x()), round(self.isometric.y()),
+                 self.angle, self.town, self.building_type)
+        self.destroy()
 
     def destroy(self) -> None:
         del self
+
+    def move(self, delta: QPoint) -> None:
+        self.isometric.setX(self.isometric.x() +
+                            isometric(delta.x(), delta.y()).x() / self.town.scale)
+        self.isometric.setY(self.isometric.y() +
+                            isometric(delta.x(), delta.y()).y() / self.town.scale)
 
 
 class Town:
     def __init__(self):
         self.cam_x = 0.0  # |
         self.cam_y = 0.0  # | - position of camera.
-        self.cam_z = 2.0  # |
-        self.scale = .5
+        self.cam_z = 1.0  # |
+        self.scale = 1.0
         # Generate 256 initial chunks.
         self.buildings = []
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]

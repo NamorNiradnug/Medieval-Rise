@@ -45,7 +45,6 @@ class Frame(QMainWindow):
 
         self.last_pos = None
         self.choosen_building = None
-        self.choosen_building_angle = None
         self.mode = 'town'
 
     def setSize(self, size: QSize) -> None:
@@ -55,71 +54,79 @@ class Frame(QMainWindow):
         self.draw_thread.cancel()
         self.check_thead.cancel()
 
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.RightButton:
             self.last_pos = event.pos()
 
-    def wheelEvent(self, event: QWheelEvent):
+    def wheelEvent(self, event: QWheelEvent) -> None:
         self.town.scaleByEvent(event)
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.last_pos:
             delta = event.pos() - self.last_pos
             self.town.translate(delta)
+            self.choosen_building.move(-delta)
             self.last_pos = event.pos()
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.RightButton:
             self.last_pos = None
 
-    def keyReleaseEvent(self, event: QKeyEvent):
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
+
+        # enter...
+        if event_key == 16777220:
+            if self.mode == 'town_builder':
+                self.choosen_building.build()
+                self.choosen_building = None
+                self.mode = 'town'
 
         if event_key == Qt.Key_B:
             self.mode = 'town_builder'
-            self.choosen_building = Town.ProjectedBuilding(Town.building_type2)
-            self.choosen_building_angle = 0
+            self.choosen_building = Town.ProjectedBuilding(
+                self.town, Town.building_type2)
 
         if event_key == Qt.Key_Right:
             if self.mode == 'town_builder':
-                self.choosen_building_angle = (
-                    self.choosen_building_angle + 90) % 360
+                self.choosen_building.angle = (
+                    self.choosen_building.angle + 90) % 360
 
         if event_key == Qt.Key_Left:
             if self.mode == 'town_builder':
-                self.choosen_building_angle = (
-                    self.choosen_building_angle - 90) % 360
+                self.choosen_building.angle = (
+                    self.choosen_building.angle - 90) % 360
 
-        if event_key == Qt.Key_D:
+        if event_key == Qt.Key_Escape:
             if self.mode == 'town_builder':
                 self.choosen_building.destroy()
                 self.choosen_building = None
                 self.mode = 'town'
 
-        if event_key == Qt.Key_Escape:
-            if self.isFullScreen():
-                self.showMaximized()
-            else:
-                self.showFullScreen()
+            if self.mode == 'town':
+                # open pause menu
+                pass
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
         self.town.draw(painter, self.size())
 
         if self.mode == 'town_builder':
-            # TODO !!!!
-            pass
+            self.choosen_building.draw(painter, self.size())
 
         painter.end()
 
     def mousePositionEvent(self) -> None:
         cursor_pos = self.cursor().pos()
 
-        if self.last_pos is None and (self.isMaximized() or self.isFullScreen()) and \
-                not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
-            self.town.cam_x += (cursor_pos.x() - self.size().width() // 2) / 40
-            self.town.cam_y += (cursor_pos.y() -
-                                self.size().height() // 2) / 34
+        if not self.last_pos and not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
+            delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
+                           (cursor_pos.y() - self.size().height() // 2) / 34)
+            self.town.cam_x += delta.x()
+            self.town.cam_y += delta.y()
+
+            if self.mode == 'town_builder':
+                self.choosen_building.move(delta)
 
 
 if __name__ == '__main__':
@@ -129,5 +136,5 @@ if __name__ == '__main__':
     frame = Frame(town)
     frame.setWindowTitle('Town')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
-    frame.show()
+    frame.showFullScreen()
     app.exec_()
