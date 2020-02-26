@@ -43,10 +43,12 @@ class Frame(QMainWindow):
 
         self.town = town
 
-        self.last_pos = None
+        self.last_pos = self.cursor().pos()
+        self.last_button = Qt.NoButton
         self.choosen_building = None
         self.choosen_btype = 0
         self.mode = 'town'
+        print('lol', town.cam_x, town.cam_y)
 
     def setSize(self, size: QSize) -> None:
         self.resize(size.width(), size.height())
@@ -56,40 +58,46 @@ class Frame(QMainWindow):
         self.check_thead.cancel()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.RightButton:
-            self.last_pos = event.pos()
+        self.last_button = event.button()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
+        # TODO cursor have to be !always! on projected building
         self.town.scaleByEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self.last_pos:
-            delta = event.pos() - self.last_pos
+        delta = event.pos() - self.last_pos
+
+        if self.last_button == Qt.RightButton:
             self.town.translate(delta)
 
-            if self.mode == 'town_builder':
-                self.choosen_building.move(-delta)
+            if self.mode == 'town_builser':
+                self.choosen_building.move(-2 * delta)
 
-            self.last_pos = event.pos()
+        if self.mode == 'town_builder':
+            self.choosen_building.move(delta)
+
+        self.last_pos = event.pos()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.RightButton:
-            self.last_pos = None
+        self.last_button = Qt.NoButton
 
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
 
         # Enter...
-        if event_key == 16777220:
+        if event_key == Qt.Key_Enter - 1:
             if self.mode == 'town_builder':
                 self.choosen_building.build()
                 self.choosen_building = None
                 self.mode = 'town'
 
         if event_key == Qt.Key_B:
+            # FIXME it works... at the second time?
             self.mode = 'town_builder'
+            print(self.town.cam_x, self.town.cam_y)
             self.choosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(0))
+            self.cursor().setPos(self.width() / 2, self.height() / 2)
 
         if event_key == Qt.Key_Up:
             if self.mode == 'town_builder':
@@ -137,7 +145,8 @@ class Frame(QMainWindow):
     def mousePositionEvent(self) -> None:
         cursor_pos = self.cursor().pos()
 
-        if not self.last_pos and not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
+        if self.last_button == Qt.NoButton and \
+                not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
             delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
                            (cursor_pos.y() - self.size().height() // 2) / 34)
             self.town.cam_x += delta.x()

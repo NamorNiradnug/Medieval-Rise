@@ -201,8 +201,8 @@ class ProjectedBuilding:
     def __init__(self, town, building_type: BuildingType):
         self.building_type = building_type
         self.town = town
-        self.isometric = isometric(
-            town.cam_x, town.cam_y)
+        self.isometric = isometric(town.cam_x, town.cam_y)
+        print('isometric', self.isometric)
         self.angle = 0
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
@@ -210,7 +210,7 @@ class ProjectedBuilding:
         height = len(blocks[0])
         iso_x = round(self.isometric.x())
         iso_y = round(self.isometric.y())
-
+        print(iso_x, iso_y)
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.7)
 
