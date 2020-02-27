@@ -81,14 +81,19 @@ class Frame(QMainWindow):
         self.last_button = Qt.NoButton
 
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
+        # FIXME turning & changing of choosen_building
         event_key = event.key()
 
         # Enter...
         if event_key == Qt.Key_Enter - 1:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.build()
-                self.choosen_building = None
-                self.mode = Modes.Town
+                if self.town.isBlocksEmpty(
+                        round(self.choosen_building.isometric.x()),
+                        round(self.choosen_building.isometric.y()),
+                        self.choosen_building.blocks):
+                    self.choosen_building.build()
+                    self.choosen_building = None
+                    self.mode = Modes.Town
 
         if event_key == Qt.Key_B:
             self.mode = Modes.TownBuilder
@@ -102,6 +107,7 @@ class Frame(QMainWindow):
                     self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
                 self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
                     self.choosen_btype)
+                print(self.choosen_building.building_type)
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:

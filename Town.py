@@ -1,4 +1,4 @@
-from PyQt5.Qt import QImage, QPointF, QPoint, QSize, QWheelEvent
+from PyQt5.Qt import QImage, QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter, QPen
 
 from resources_manager import getImage
@@ -8,10 +8,6 @@ def isometric(x: float, y: float) -> QPointF:
     # (iso_x + iso_y) * 32 = x
     # (iso_x - iso_y) * 55 = y
     return QPointF(((y / 32) + (x / 55)), ((y / 32) - (x / 55))) / 2
-
-
-def rectangular(iso_x: float, iso_y: float) -> QPointF:
-    return QPointF((iso_x - iso_y) * 55, (iso_x + iso_y) * 32)
 
 
 class Block:
@@ -195,7 +191,6 @@ class Building(TownObject):
 
 
 class ProjectedBuilding:
-    # TODO (later) projected building have to draw UNDER of builded
     """Building which player's projecting to build."""
 
     def __init__(self, town, building_type: BuildingType):
@@ -246,8 +241,8 @@ class ProjectedBuilding:
 class Town:
     def __init__(self):
         self.cam_x = 0.0  # |
-        self.cam_y = 0.0  # | - position of camera.
-        self.cam_z = 1.0  # |
+        self.cam_y = 0.0          # | - position of camera.
+        self.cam_z = 1.0          # |
         self.scale = 1.0
 
         self.buildings = []
@@ -256,9 +251,6 @@ class Town:
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
-
-    def removeBlock(self, x: int, y: int, z: int) -> None:
-        self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
 
     def draw(self, painter: QPainter, size: QSize) -> None:
         x = self.cam_x - (self.cam_z * size.width()) // 2
@@ -271,6 +263,21 @@ class Town:
                    -1024 < ((chunk.x + chunk.y) * 32 - y) < size.height() * self.cam_z:
                     chunk.draw(painter, x, y)
         painter.scale(self.cam_z, self.cam_z)
+
+    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: (((Block, ...), ...), ...)) -> bool:
+        var = True
+        for block_y in range(len(blocks[0])):
+            for block_x in range(len(blocks)):
+                for block_z in range(len(blocks[block_x][block_y])):
+                    var *= self.isBlockEmpty(
+                        block_x + iso_x, block_y + iso_y, block_z)
+        return var
+
+    def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
+        return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
+
+    def removeBlock(self, x: int, y: int, z: int) -> None:
+        self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = - event.angleDelta().y() / (self.scale * 480)
