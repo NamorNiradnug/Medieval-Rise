@@ -195,51 +195,52 @@ class Building(TownObject):
 
 
 class ProjectedBuilding:
-    # TODO projected building have to draw UNDER of builded
+    # TODO (later) projected building have to draw UNDER of builded
     """Building which player's projecting to build."""
 
     def __init__(self, town, building_type: BuildingType):
         self.building_type = building_type
+        self.blocks = building_type.blocks
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
-        self.angle = 0
+        self._angle = 0
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
-        blocks = turnBlocks(self.building_type.blocks, self.angle)
-        height = len(blocks[0])
+        height = len(self.blocks[0])
+        iso_x = round(self.isometric.x())
+        iso_y = round(self.isometric.y())
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.7)
 
         for block_y in range(height):
-            for block_x in range(len(blocks)):
-                for block_z in range(len(blocks[block_x][block_y])):
-                    block = blocks[block_x][block_y][block_z]
+            for block_x in range(len(self.blocks)):
+                for block_z in range(len(self.blocks[block_x][block_y])):
+                    block = self.blocks[block_x][block_y][block_z]
                     if block is not None:
-                        coords = self.drawCoordinates(
-                            block_x, block_y, block_z, screen_size)
-                        block.draw(coords.x(), coords.y(), self.angle, painter)
+                        block.draw((iso_x + block_x - block_y - iso_y) * 55 - self.town.cam_x +
+                                   self.town.cam_z * screen_size.width() / 2,
+                                   (iso_x + iso_y + block_x + block_y) * 32 - self.town.cam_y -
+                                   block_z * 64 + screen_size.height() * self.town.cam_z / 2,
+                                   self._angle, painter)
 
-    def drawCoordinates(self, block_x: int, block_y: int, block_z: int, screen_size: QSize) -> QPoint:
-        iso_x = round(self.isometric.x())
-        iso_y = round(self.isometric.y())
-        return QPoint(round((iso_x + block_x - block_y - iso_y) * 55 -
-                            self.town.cam_x + self.town.cam_z * screen_size.width() / 2),
-                      round((iso_x + iso_y + block_x + block_y) * 32 -
-                            block_z * 64 - self.town.cam_y + screen_size.height() * self.town.cam_z / 2))
+    def getAngle(self):
+        return self._angle
 
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),
-                 self.angle, self.town, self.building_type)
+                 self._angle, self.town, self.building_type)
         self.destroy()
 
     def destroy(self) -> None:
         del self
 
-    def move(self, delta: QPoint) -> None:
-        self.isometric.setX(self.isometric.x() +
-                            isometric(delta.x(), delta.y()).x() / self.town.scale)
-        self.isometric.setY(self.isometric.y() +
-                            isometric(delta.x(), delta.y()).y() / self.town.scale)
+    def turn(self, delta_angle: int) -> None:
+        if delta_angle not in {90, -90}:
+            raise AttributeError(
+                f'Buildings can turn on for 90 or -90 degrees, not {delta_angle}')
+
+        self._angle = (self._angle + delta_angle) % 360
+        self.blocks = turnBlocks(self.building_type.blocks, self._angle)
 
 
 class Town:
@@ -248,8 +249,9 @@ class Town:
         self.cam_y = 0.0  # | - position of camera.
         self.cam_z = 1.0  # |
         self.scale = 1.0
-        # Generate 256 initial chunks.
+
         self.buildings = []
+        # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:

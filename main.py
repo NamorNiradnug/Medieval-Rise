@@ -112,13 +112,11 @@ class Frame(QMainWindow):
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.angle = (
-                    self.choosen_building.angle + 90) % 360
+                self.choosen_building.turn(-90)
 
         if event_key == Qt.Key_Left:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.angle = (
-                    self.choosen_building.angle - 90) % 360
+                self.choosen_building.turn(90)
 
         if event_key == Qt.Key_Escape:
             if self.mode == Modes.TownBuilder:
