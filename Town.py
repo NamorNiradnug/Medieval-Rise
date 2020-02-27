@@ -202,15 +202,11 @@ class ProjectedBuilding:
         self.building_type = building_type
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
-        print('isometric', self.isometric)
         self.angle = 0
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
         blocks = turnBlocks(self.building_type.blocks, self.angle)
         height = len(blocks[0])
-        iso_x = round(self.isometric.x())
-        iso_y = round(self.isometric.y())
-        print(iso_x, iso_y)
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.7)
 
@@ -219,11 +215,17 @@ class ProjectedBuilding:
                 for block_z in range(len(blocks[block_x][block_y])):
                     block = blocks[block_x][block_y][block_z]
                     if block is not None:
-                        block.draw((iso_x + block_x - block_y - iso_y) * 55 -
-                                   self.town.cam_x + self.town.cam_z * screen_size.width() / 2,
-                                   (iso_x + iso_y + block_x + block_y) * 32 -
-                                   block_z * 64 - self.town.cam_y + screen_size.height() * self.town.cam_z / 2,
-                                   self.angle, painter)
+                        coords = self.drawCoordinates(
+                            block_x, block_y, block_z, screen_size)
+                        block.draw(coords.x(), coords.y(), self.angle, painter)
+
+    def drawCoordinates(self, block_x: int, block_y: int, block_z: int, screen_size: QSize) -> QPoint:
+        iso_x = round(self.isometric.x())
+        iso_y = round(self.isometric.y())
+        return QPoint(round((iso_x + block_x - block_y - iso_y) * 55 -
+                            self.town.cam_x + self.town.cam_z * screen_size.width() / 2),
+                      round((iso_x + iso_y + block_x + block_y) * 32 -
+                            block_z * 64 - self.town.cam_y + screen_size.height() * self.town.cam_z / 2))
 
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),

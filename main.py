@@ -1,3 +1,4 @@
+from enum import Enum
 from threading import Event, Thread
 from types import FunctionType
 
@@ -30,6 +31,12 @@ class Interval(Thread):
         self.stopped.set()
 
 
+class Modes(Enum):
+    """Modes for Frame."""
+    Town = 0
+    TownBuilder = 1
+
+
 class Frame(QMainWindow):
     def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
         super().__init__()
@@ -47,8 +54,7 @@ class Frame(QMainWindow):
         self.last_button = Qt.NoButton
         self.choosen_building = None
         self.choosen_btype = 0
-        self.mode = 'town'
-        print('lol', town.cam_x, town.cam_y)
+        self.mode = Modes.Town
 
     def setSize(self, size: QSize) -> None:
         self.resize(size.width(), size.height())
@@ -61,7 +67,6 @@ class Frame(QMainWindow):
         self.last_button = event.button()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
-        # TODO cursor have to be !always! on projected building
         self.town.scaleByEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
@@ -69,12 +74,6 @@ class Frame(QMainWindow):
 
         if self.last_button == Qt.RightButton:
             self.town.translate(delta)
-
-            if self.mode == 'town_builser':
-                self.choosen_building.move(-2 * delta)
-
-        if self.mode == 'town_builder':
-            self.choosen_building.move(delta)
 
         self.last_pos = event.pos()
 
@@ -86,50 +85,48 @@ class Frame(QMainWindow):
 
         # Enter...
         if event_key == Qt.Key_Enter - 1:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_building.build()
                 self.choosen_building = None
-                self.mode = 'town'
+                self.mode = Modes.Town
 
         if event_key == Qt.Key_B:
-            # FIXME it works... at the second time?
-            self.mode = 'town_builder'
-            print(self.town.cam_x, self.town.cam_y)
+            self.mode = Modes.TownBuilder
             self.choosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(0))
             self.cursor().setPos(self.width() / 2, self.height() / 2)
 
         if event_key == Qt.Key_Up:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_btype = (
                     self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
                 self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
                     self.choosen_btype)
 
         if event_key == Qt.Key_Down:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_btype = (
                     self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
                 self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
                     self.choosen_btype)
 
         if event_key == Qt.Key_Right:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_building.angle = (
                     self.choosen_building.angle + 90) % 360
 
         if event_key == Qt.Key_Left:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_building.angle = (
                     self.choosen_building.angle - 90) % 360
 
         if event_key == Qt.Key_Escape:
-            if self.mode == 'town_builder':
+            if self.mode == Modes.TownBuilder:
                 self.choosen_building.destroy()
                 self.choosen_building = None
-                self.mode = 'town'
+                self.mode = Modes.Town
 
-            if self.mode == 'town':
+            if self.mode == Modes.Town:
                 # open pause menu
                 pass
 
@@ -137,7 +134,11 @@ class Frame(QMainWindow):
         painter = QPainter(self)
         self.town.draw(painter, self.size())
 
-        if self.mode == 'town_builder':
+        if self.mode == Modes.TownBuilder:
+            cursor_pos = (self.cursor().pos() - QPoint(self.width(), self.height()) /
+                          2) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
+            self.choosen_building.isometric = Town.isometric(
+                cursor_pos.x(), cursor_pos.y())
             self.choosen_building.draw(painter, self.size())
 
         painter.end()
@@ -152,16 +153,13 @@ class Frame(QMainWindow):
             self.town.cam_x += delta.x()
             self.town.cam_y += delta.y()
 
-            if self.mode == 'town_builder':
-                self.choosen_building.move(delta * self.town.scale)
-
 
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
     Town.Building(1, 5, 0, town, Town.BuildingTypes.building_type2)
     frame = Frame(town)
-    frame.setWindowTitle('Town')
+    frame.setWindowTitle('Medieval Rise')
     frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
     frame.showFullScreen()
     app.exec_()
