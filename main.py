@@ -81,7 +81,6 @@ class Frame(QMainWindow):
         self.last_button = Qt.NoButton
 
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
-        # FIXME turning & changing of choosen_building
         event_key = event.key()
 
         # Enter...
@@ -105,16 +104,15 @@ class Frame(QMainWindow):
             if self.mode == Modes.TownBuilder:
                 self.choosen_btype = (
                     self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
-                    self.choosen_btype)
-                print(self.choosen_building.building_type)
+                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(
+                    self.choosen_btype))
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:
                 self.choosen_btype = (
                     self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.building_type = Town.BuildingTypes.getByNumber(
-                    self.choosen_btype)
+                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(
+                    self.choosen_btype))
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
@@ -154,8 +152,7 @@ class Frame(QMainWindow):
                 not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
             delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
                            (cursor_pos.y() - self.size().height() // 2) / 34)
-            self.town.cam_x += delta.x()
-            self.town.cam_y += delta.y()
+            self.town.translate(-delta)
 
 
 if __name__ == '__main__':

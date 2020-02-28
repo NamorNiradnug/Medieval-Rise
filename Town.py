@@ -194,7 +194,7 @@ class ProjectedBuilding:
     """Building which player's projecting to build."""
 
     def __init__(self, town, building_type: BuildingType):
-        self.building_type = building_type
+        self._building_type = building_type
         self.blocks = building_type.blocks
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
@@ -223,11 +223,15 @@ class ProjectedBuilding:
 
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),
-                 self._angle, self.town, self.building_type)
+                 self._angle, self.town, self._building_type)
         self.destroy()
 
     def destroy(self) -> None:
         del self
+
+    def setBuildingType(self, building_type: BuildingType) -> None:
+        self._building_type = building_type
+        self.blocks = turnBlocks(self._building_type.blocks, self._angle)
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
@@ -235,7 +239,7 @@ class ProjectedBuilding:
                 f'Buildings can turn on for 90 or -90 degrees, not {delta_angle}')
 
         self._angle = (self._angle + delta_angle) % 360
-        self.blocks = turnBlocks(self.building_type.blocks, self._angle)
+        self.blocks = turnBlocks(self._building_type.blocks, self._angle)
 
 
 class Town:
@@ -265,13 +269,12 @@ class Town:
         painter.scale(self.cam_z, self.cam_z)
 
     def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: (((Block, ...), ...), ...)) -> bool:
-        var = True
-        for block_y in range(len(blocks[0])):
-            for block_x in range(len(blocks)):
-                for block_z in range(len(blocks[block_x][block_y])):
-                    var *= self.isBlockEmpty(
-                        block_x + iso_x, block_y + iso_y, block_z)
-        return var
+        for y in range(len(blocks[0])):
+            for x in range(len(blocks)):
+                for z in range(len(blocks[x][y])):
+                    if blocks[x][y][z] is not None and not self.isBlockEmpty(x + iso_x, y + iso_y, z):
+                        return False
+        return True
 
     def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
         return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
