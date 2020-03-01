@@ -4,10 +4,16 @@ from PyQt5.QtGui import QPainter, QPen
 from resources_manager import getImage
 
 
+ISOMETRIC_WIDTH = 64
+ISOMETRIC_HEIGHT1 = 66
+ISOMETRIC_HEIGHT2 = 79
+
+
 def isometric(x: float, y: float) -> QPointF:
-    # (iso_x + iso_y) * 32 = x
-    # (iso_x - iso_y) * 55 = y
-    return QPointF(((y / 32) + (x / 55)), ((y / 32) - (x / 55))) / 2
+    # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
+    # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
+    return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
+                   ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH))) / 2
 
 
 class Block:
@@ -15,14 +21,15 @@ class Block:
         self.sides = {i: getImage(f'{name}{i}') for i in range(0, 360, 90)}
 
     def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
-        painter.drawImage(x - 55, y - 64, self.sides[angle])
+        painter.drawImage(x - ISOMETRIC_WIDTH, y -
+                          ISOMETRIC_HEIGHT2, self.sides[angle])
 
 
 class BlocksManager:
     """Store all blocks.
         Use Blocks.block_name to get Block(block_name)."""
 
-    blocks = {name: Block(name) for name in ('block', )}
+    blocks = {name: Block(name) for name in ('home', 'block')}
 
     def __getattr__(self, item):
         if item in self.blocks:
@@ -38,7 +45,7 @@ class Ground:
         self.image = getImage(name)
 
     def draw(self, x: float, y: float, painter: QPainter) -> None:
-        painter.drawImage(x - 55, y, self.image)
+        painter.drawImage(x - ISOMETRIC_WIDTH, y, self.image)
 
 
 class GroundsManager:
@@ -72,8 +79,8 @@ class Chunk:
         # Draw all grounds.
         for i in range(16):
             for j in range(16):
-                self.grounds[i][j].draw((self.x + i - self.y - j) * 55 - x,
-                                        (self.x + self.y + i + j) * 32 - y, painter)
+                self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x,
+                                        (self.x + self.y + i + j) * (ISOMETRIC_HEIGHT1 / 2) - y, painter)
 
         # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
@@ -83,8 +90,11 @@ class Chunk:
                     if building is not None:
                         block, angle = building.getBlock(i + self.x,
                                                          j + self.y, z)
-                        block.draw((self.x + i - self.y - j) * 55 - x,
-                                   (self.x + self.y + i + j) * 32 - z * 64 - y, angle, painter)
+                        block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x,
+                                   (self.x + self.y + i + j) *
+                                   (ISOMETRIC_HEIGHT1 / 2) -
+                                   z * ISOMETRIC_HEIGHT2 - y,
+                                   angle, painter)
 
 
 class TownObjectType:
@@ -110,9 +120,9 @@ class BuildingType:
 
 class BuildingTypeManager:
 
-    building_types = {'building_type1': BuildingType((((Blocks.block,),),)),
+    building_types = {'building_type1': BuildingType((((Blocks.home,),),)),
                       'building_type2': BuildingType(
-        (((Blocks.block, Blocks.block), (Blocks.block,)),)
+        (((Blocks.home, Blocks.home), (Blocks.home,)),)
     )
     }
 
@@ -212,10 +222,10 @@ class ProjectedBuilding:
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     block = self.blocks[block_x][block_y][block_z]
                     if block is not None:
-                        block.draw((iso_x + block_x - block_y - iso_y) * 55 - self.town.cam_x +
+                        block.draw((iso_x + block_x - block_y - iso_y) * ISOMETRIC_WIDTH - self.town.cam_x +
                                    self.town.cam_z * screen_size.width() / 2,
-                                   (iso_x + iso_y + block_x + block_y) * 32 - self.town.cam_y -
-                                   block_z * 64 + screen_size.height() * self.town.cam_z / 2,
+                                   (iso_x + iso_y + block_x + block_y) * (ISOMETRIC_HEIGHT1 / 2) - self.town.cam_y -
+                                   block_z * ISOMETRIC_HEIGHT2 + screen_size.height() * self.town.cam_z / 2,
                                    self._angle, painter)
 
     def getAngle(self):
@@ -263,8 +273,8 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if -880 < ((chunk.x - chunk.y) * 55 - x) < size.width() * self.cam_z + 880 and \
-                   -1024 < ((chunk.x + chunk.y) * 32 - y) < size.height() * self.cam_z:
+                if -880 < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) < size.width() * self.cam_z + 880 and \
+                   -1024 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) < size.height() * self.cam_z:
                     chunk.draw(painter, x, y)
         painter.scale(self.cam_z, self.cam_z)
 
