@@ -29,7 +29,7 @@ class BlocksManager:
     """Store all blocks.
         Use Blocks.block_name to get Block(block_name)."""
 
-    blocks = {name: Block(name) for name in ('home', 'block')}
+    blocks = {name: Block(name) for name in ('home', 'home_roof')}
 
     def __getattr__(self, item):
         if item in self.blocks:
@@ -120,9 +120,9 @@ class BuildingType:
 
 class BuildingTypeManager:
 
-    building_types = {'building_type1': BuildingType((((Blocks.home,),),)),
+    building_types = {'building_type1': BuildingType((((Blocks.home, Blocks.home_roof),),)),
                       'building_type2': BuildingType(
-        (((Blocks.home, Blocks.home), (Blocks.home,)),)
+        (((Blocks.home, Blocks.home, Blocks.home_roof), (Blocks.home, Blocks.home_roof)),)
     )
     }
 
@@ -255,8 +255,8 @@ class ProjectedBuilding:
 class Town:
     def __init__(self):
         self.cam_x = 0.0  # |
-        self.cam_y = 0.0          # | - position of camera.
-        self.cam_z = 1.0          # |
+        self.cam_y = 0.0  # | - position of camera.
+        self.cam_z = 1.0  # |
         self.scale = 1.0
 
         self.buildings = []
@@ -273,8 +273,8 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if -880 < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) < size.width() * self.cam_z + 880 and \
-                   -1024 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) < size.height() * self.cam_z:
+                if -16 * ISOMETRIC_WIDTH < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) < size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and \
+                   -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) < size.height() * self.cam_z:
                     chunk.draw(painter, x, y)
         painter.scale(self.cam_z, self.cam_z)
 
