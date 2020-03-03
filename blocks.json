@@ -1,0 +1,10 @@
+{
+    "home": {
+        "0": {
+            "NORTH": "wood_cross",
+            "SOUTH": "wood",
+            "WEST": "wood_door",
+            "EAST": "wood_window"
+        }
+    }
+}

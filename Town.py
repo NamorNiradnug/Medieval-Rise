@@ -3,10 +3,13 @@ from PyQt5.QtGui import QPainter, QPen
 
 from resources_manager import getImage
 
+from json import loads
 
 ISOMETRIC_WIDTH = 64
 ISOMETRIC_HEIGHT1 = 64
 ISOMETRIC_HEIGHT2 = 79
+
+BLOCKS_DATA = loads(''.join(open('blocks.json').readlines()))
 
 
 def isometric(x: float, y: float) -> QPointF:
@@ -17,19 +20,26 @@ def isometric(x: float, y: float) -> QPointF:
 
 
 class Block:
+    # FIXME ...
     def __init__(self, name: str):
-        self.sides = {i: getImage(f'{name}{i}') for i in range(0, 360, 90)}
+        sides = ("NORTH", "EAST", "SOUTH", "WEST")
+        self.variants = {int(i): {j * 90: (getImage(BLOCKS_DATA[name][i][sides[j]]),
+                                           getImage(BLOCKS_DATA[name][i][sides[(j + 1) % 4]]).mirrored(
+            vertical=True, horizontal=False))
+            for j in range(3)} for i in BLOCKS_DATA[name]}
 
-    def draw(self, x: float, y: float, angle: int, painter: QPainter) -> None:
+    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: int = 0) -> None:
         painter.drawImage(x - ISOMETRIC_WIDTH, y -
-                          ISOMETRIC_HEIGHT2, self.sides[angle])
+                          ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
+        painter.drawImage(x, y - ISOMETRIC_HEIGHT2,
+                          self.variants[variant][angle][1])
 
 
 class BlocksManager:
     """Store all blocks.
         Use Blocks.block_name to get Block(block_name)."""
 
-    blocks = {name: Block(name) for name in ('home', 'home_roof')}
+    blocks = {name: Block(name) for name in ('home', )}
 
     def __getattr__(self, item):
         if item in self.blocks:
@@ -70,7 +80,8 @@ class Chunk:
         self.x = x * 16
         self.y = y * 16
         # Generate matrix 16 by 16 by 3.
-        self.blocks = tuple([tuple([[None, None, None]
+        self.is_empty = True
+        self.blocks = tuple([tuple([[None] * 4
                                     for j in range(16)]) for i in range(16)])
         self.grounds = tuple([[Grounds.grass for j in range(16)]
                               for i in range(16)])
@@ -81,6 +92,9 @@ class Chunk:
             for j in range(16):
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x,
                                         (self.x + self.y + i + j) * (ISOMETRIC_HEIGHT1 / 2) - y, painter)
+
+        if self.is_empty:
+            return
 
         # Draw all blocks in chunk sorted by x, y, z
         for i in range(16):
@@ -120,9 +134,10 @@ class BuildingType:
 
 class BuildingTypeManager:
 
-    building_types = {'building_type1': BuildingType((((Blocks.home, Blocks.home_roof),),)),
+    building_types = {'building_type1': BuildingType((((Blocks.home, Blocks.home),),)),
                       'building_type2': BuildingType(
-        (((Blocks.home, Blocks.home, Blocks.home_roof), (Blocks.home, Blocks.home_roof)),)
+        (((Blocks.home, Blocks.home, Blocks.home),
+          (Blocks.home, Blocks.home)),)
     )
     }
 
@@ -265,6 +280,7 @@ class Town:
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
+        self.chunks[x // 16][y // 16].is_empty = False
 
     def draw(self, painter: QPainter, size: QSize) -> None:
         x = self.cam_x - (self.cam_z * size.width()) // 2
@@ -291,6 +307,8 @@ class Town:
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
+        self.chunks[x // 16][y // 16] = (self.chunks[x // 16][y // 16].blocks
+                                         == tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)]))
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = - event.angleDelta().y() / (self.scale * 480)
