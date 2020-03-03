@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from enum import Enum
 from threading import Event, Thread
 from types import FunctionType
@@ -169,6 +170,5 @@ if __name__ == '__main__':
     Town.Building(1, 5, 0, town, Town.BuildingTypes.building_type2)
     frame = Frame(town)
     frame.setWindowTitle('Medieval Rise')
-    frame.setWindowIcon(QIcon(QPixmap(getImage('block90'))))
     frame.showFullScreen()
     app.exec_()

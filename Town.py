@@ -5,7 +5,7 @@ from resources_manager import getImage
 
 
 ISOMETRIC_WIDTH = 64
-ISOMETRIC_HEIGHT1 = 66
+ISOMETRIC_HEIGHT1 = 64
 ISOMETRIC_HEIGHT2 = 79
 
 
@@ -294,7 +294,7 @@ class Town:
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = - event.angleDelta().y() / (self.scale * 480)
-        if .5 <= self.cam_z + delta <= 2.5:
+        if .5 <= self.cam_z + delta <= 3:
             self.cam_z += delta
             self.scale = 1 / self.cam_z
 
