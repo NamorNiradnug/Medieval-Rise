@@ -21,7 +21,6 @@ def isometric(x: float, y: float) -> QPointF:
 
 
 class Block:
-    # FIXME ...
     def __init__(self, name: str):
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
         self.variants = {int(i): {j * 90: (getImage(f'{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left'),
@@ -223,12 +222,9 @@ class ProjectedBuilding:
     def __init__(self, town, building_type: BuildingType):
         self._building_type = building_type
         self.blocks = building_type.blocks
-        self.blocks_variants = tuple([
-            tuple([
-                tuple([choice(list(block.variants))
-                       for block in self.blocks[x][y]])
-                for y in range(matrixHeight(self.blocks))])
-            for x in range(len(self.blocks))])
+        self._blocks_variants = None
+        self.generateVariants()
+        self.blocks_variants = self._blocks_variants
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
         self._angle = 0
@@ -262,9 +258,19 @@ class ProjectedBuilding:
     def destroy(self) -> None:
         del self
 
+    def generateVariants(self):
+        self._blocks_variants = tuple([
+            tuple([
+                tuple([choice(list(block.variants)) if block else None
+                       for block in self._building_type.blocks[x][y]])
+                for y in range(matrixHeight(self._building_type.blocks))])
+            for x in range(len(self._building_type.blocks))])
+
     def setBuildingType(self, building_type: BuildingType) -> None:
         self._building_type = building_type
         self.blocks = turnBlocks(self._building_type.blocks, self._angle)
+        self.generateVariants()
+        self.blocks_variants = turnBlocks(self._blocks_variants, self._angle)
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
@@ -273,6 +279,7 @@ class ProjectedBuilding:
 
         self._angle = (self._angle + delta_angle) % 360
         self.blocks = turnBlocks(self._building_type.blocks, self._angle)
+        self.blocks_variants = turnBlocks(self._blocks_variants, self._angle)
 
 
 class Town:
