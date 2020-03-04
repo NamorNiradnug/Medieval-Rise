@@ -98,8 +98,7 @@ class Frame(QMainWindow):
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
 
-        # Enter...
-        if event_key == Qt.Key_Enter - 1:
+        if event_key in {Qt.Key_Return, Qt.Key_Enter}:
             if self.mode == Modes.TownBuilder:
                 self.buildProjectedBuilding()
 
@@ -167,7 +166,6 @@ class Frame(QMainWindow):
 if __name__ == '__main__':
     app = QApplication([])
     town = Town.Town()
-    Town.Building(1, 5, 0, town, Town.BuildingTypes.building_type2)
     frame = Frame(town)
     frame.setWindowTitle('Medieval Rise')
     frame.showFullScreen()
