@@ -219,6 +219,8 @@ class Building(TownObject):
 class ProjectedBuilding:
     """Building which player's projecting to build."""
 
+    # TODO more comfortable chosing of type.
+
     def __init__(self, town, building_type: BuildingType):
         self._building_type = building_type
         self.blocks = building_type.blocks
@@ -330,6 +332,8 @@ class Town:
         if .5 <= self.cam_z + delta <= 3:
             self.cam_z += delta
             self.scale = 1 / self.cam_z
+
+    # TODO saving of Town
 
     def translate(self, delta: QPoint) -> None:
         self.cam_x -= delta.x() * self.cam_z
