@@ -64,8 +64,6 @@ class Frame(QMainWindow):
                 round(self.choosen_building.isometric.y()),
                 self.choosen_building.blocks):
             self.choosen_building.build()
-            self.choosen_building = None
-            self.mode = Modes.Town
 
     def setSize(self, size: QSize) -> None:
         self.resize(size.width(), size.height())
@@ -105,7 +103,7 @@ class Frame(QMainWindow):
         if event_key == Qt.Key_B:
             self.mode = Modes.TownBuilder
             self.choosen_building = Town.ProjectedBuilding(
-                self.town, Town.BuildingTypes.getByNumber(0))
+                self.town, Town.BuildingTypes.getByNumber(self.choosen_btype))
             self.cursor().setPos(self.width() / 2, self.height() / 2)
 
         if event_key == Qt.Key_Up:
@@ -157,7 +155,7 @@ class Frame(QMainWindow):
         cursor_pos = self.cursor().pos()
 
         if self.last_button == Qt.NoButton and \
-                not isPointInRect(cursor_pos, (QPoint(20, 20), self.size() - QSize(40, 40))):
+                not isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
             delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
                            (cursor_pos.y() - self.size().height() // 2) / 34)
             self.town.translate(-delta)

@@ -1,18 +1,38 @@
 {
-    "home_door": {
+    "house_door_2": {
         "0": {
-            "NORTH": "stone_diag",
-            "EAST": "wood_window",
+            "NORTH": "wood_cross",
+            "EAST": "stone_diag",
             "SOUTH": "wood",
             "WEST": "wood_door"
         }
     },
-    "home": {
+    "house_door": {
+        "0": {
+            "NORTH": "stone_diag",
+            "EAST": "wood_window",
+            "SOUTH": "wood_door",
+            "WEST": "wood_window"
+        },
+        "1": {
+            "NORTH": "wood_window",
+            "EAST": "stone_diag",
+            "SOUTH": "wood_door",
+            "WEST": "wood_cross"
+        }
+    },
+    "house": {
         "0": {
             "NORTH": "wood_cross",
             "EAST": "wood_cross",
             "SOUTH": "wood",
             "WEST": "wood_window"
+        },
+        "1": {
+            "NORTH": "stone_diag",
+            "EAST": "wood_window",
+            "SOUTH": "wood_window",
+            "WEST": "wood_cross"
         }
     },
     "roof": {

@@ -1,0 +1,44 @@
+{
+    "little_house": {
+        "blocks": {
+            "0": [
+                [
+                    [
+                        "house_door",
+                        "roof"
+                    ]
+                ]
+            ]
+        }
+    },
+    "house": {
+        "blocks": {
+            "middle_door": [
+                [
+                    [
+                        "house",
+                        "roof"
+                    ],
+                    [
+                        "house_door_2",
+                        "house",
+                        "roof"
+                    ]
+                ]
+            ],
+            "another": [
+                [
+                    [
+                        "house_door",
+                        "roof"
+                    ],
+                    [
+                        "house",
+                        "house",
+                        "roof"
+                    ]
+                ]
+            ]
+        }
+    }
+}

@@ -6,14 +6,15 @@ from resources_manager import getImage
 from json import load
 from random import choice
 
-ISOMETRIC_WIDTH = 64
-ISOMETRIC_HEIGHT1 = 64
-ISOMETRIC_HEIGHT2 = 79
+ISOMETRIC_WIDTH = 64    # |
+ISOMETRIC_HEIGHT1 = 64  # | textures parameters
+ISOMETRIC_HEIGHT2 = 79  # |
 
 BLOCKS_DATA = load(open('blocks.json'))
 
 
 def isometric(x: float, y: float) -> QPointF:
+    """Convert rectandular coordinates to isometric."""
     # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
     return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
@@ -21,13 +22,15 @@ def isometric(x: float, y: float) -> QPointF:
 
 
 class Block:
+    """Store data of block."""
+
     def __init__(self, name: str):
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
-        self.variants = {int(i): {j * 90: (getImage(f'{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left'),
-                                           getImage(f'{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right'))
-                                  for j in range(4)} for i in BLOCKS_DATA[name]}
+        self.variants = {i: {j * 90: (getImage(f'{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left'),
+                                      getImage(f'{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right'))
+                             for j in range(4)} for i in BLOCKS_DATA[name]}
 
-    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: int = 0) -> None:
+    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: str) -> None:
         painter.drawImage(x - ISOMETRIC_WIDTH, y -
                           ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2,
@@ -48,8 +51,22 @@ class BlocksManager:
 
 Blocks = BlocksManager()
 
+loaded_bt_data = load(open('building_types.json'))
+BUILDING_TYPES_DATA = loaded_bt_data.copy()
+
+for item in loaded_bt_data:
+    for variant in loaded_bt_data[item]['blocks']:
+        for x in range(len(loaded_bt_data[item]['blocks'][variant])):
+            for y in range(len(loaded_bt_data[item]['blocks'][variant][x])):
+                for z in range(len(loaded_bt_data[item]['blocks'][variant][x][y])):
+                    BUILDING_TYPES_DATA[item]['blocks'][variant][x][y][z] = \
+                        Blocks.__getattr__(
+                            loaded_bt_data[item]['blocks'][variant][x][y][z])
+
 
 class Ground:
+    """Store data of ground."""
+
     def __init__(self, name: str):
         self.image = getImage(name)
 
@@ -124,22 +141,28 @@ def matrixHeight(matrix: ((object, ...), ...)) -> int:
 class BuildingType:
     """Store information about some building type."""
 
-    def __init__(self, blocks: (((Block, ...), ...), ...)):
-        height = matrixHeight(blocks)
-        # convert blocks to rectangular matrix
-        self.blocks = tuple([blocks_y + ((None,), ) * (height - len(blocks_y))
-                             for blocks_y in blocks])
+    def __init__(self, blocks: {str: (((Block, ...), ...), ...)}):
+        self.blocks = {}
+        for variant in blocks:
+            height = matrixHeight(blocks[variant])
+            # convert blocks to rectangular matrix
+            self.blocks[variant] = tuple([blocks_y + ((None,), ) * (height - len(blocks_y))
+                                          for blocks_y in blocks[variant]])
 
 
 class BuildingTypeManager:
+    """Store all BuildingTypes.
+       Use BuildingTypes.bt_name to get BuildingType called 'bt_name'.
+       Use BuildingType.getByNumber(num) to get BuildingType with number 'num'."""
 
-    building_types = {'building_type1': BuildingType((((Blocks.home_door, Blocks.roof),),)),
-                      'building_type2': BuildingType(
-        (((Blocks.home_door, Blocks.home, Blocks.roof),
-          (Blocks.home, Blocks.roof)),)
-    )
-    }
-
+    building_types = {item: BuildingType({
+        variant:
+            tuple((
+                tuple((
+                    tuple(block_y) for block_y in blocks_x
+                )) for blocks_x in BUILDING_TYPES_DATA[item]['blocks'][variant]
+            )) for variant in BUILDING_TYPES_DATA[item]['blocks']
+    }) for item in BUILDING_TYPES_DATA}
     sorted_names = sorted(building_types)
 
     def getByNumber(self, number: int) -> BuildingType:
@@ -176,6 +199,8 @@ def turnBlocks(blocks: (((Block, ...), ...), ...), angle: int) -> (((Block, ...)
 
 
 class TownObject:
+    """Object of Town."""
+
     def __init__(self, x: int, y: int, angle: int, town, object_type: TownObjectType):
         if angle not in {0, 90, 180, 270}:
             raise AttributeError('Angle must be 0, 90, 180 or 270, not', angle)
@@ -187,11 +212,13 @@ class TownObject:
 
 
 class Building(TownObject):
-    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: (((int, ...), ...), ...)):
+    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: (((int, ...), ...), ...), btype_variant: str):
         super().__init__(x, y, angle, town, building_type)
         self.building_type = building_type
+        self.btype_variant = btype_variant
 
-        self.blocks = turnBlocks(self.building_type.blocks, angle)
+        self.blocks = turnBlocks(
+            self.building_type.blocks[btype_variant], angle)
         self.blocks_variants = blocks_variants
 
         town.buildings.append(self)
@@ -221,15 +248,15 @@ class ProjectedBuilding:
 
     # TODO more comfortable chosing of type.
 
-    def __init__(self, town, building_type: BuildingType):
+    def __init__(self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
-        self.blocks = building_type.blocks
+        self._angle = 0
+        self._btype_variant = choice(list(building_type.blocks))
+        self.blocks = building_type.blocks[self._btype_variant]
         self._blocks_variants = None
         self.generateVariants()
-        self.blocks_variants = self._blocks_variants
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
-        self._angle = 0
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
         height = len(self.blocks[0])
@@ -249,30 +276,34 @@ class ProjectedBuilding:
                                    block_z * ISOMETRIC_HEIGHT2 + screen_size.height() * self.town.cam_z / 2,
                                    self._angle, painter, self.blocks_variants[block_x][block_y][block_z])
 
-    def getAngle(self):
+    def getAngle(self) -> int:
         return self._angle
 
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),
-                 self._angle, self.town, self._building_type, self.blocks_variants)
-        self.destroy()
+                 self._angle, self.town, self._building_type, self.blocks_variants, self._btype_variant)
+        self.generateVariants()
 
     def destroy(self) -> None:
         del self
 
-    def generateVariants(self):
+    def generateVariants(self) -> None:
+        """Generate variants of blocks in current building."""
+
         self._blocks_variants = tuple([
             tuple([
                 tuple([choice(list(block.variants)) if block else None
-                       for block in self._building_type.blocks[x][y]])
-                for y in range(matrixHeight(self._building_type.blocks))])
-            for x in range(len(self._building_type.blocks))])
+                       for block in self._building_type.blocks[self._btype_variant][x][y]])
+                for y in range(matrixHeight(self._building_type.blocks[self._btype_variant]))])
+            for x in range(len(self._building_type.blocks[self._btype_variant]))])
+        self.blocks_variants = turnBlocks(self._blocks_variants, self._angle)
 
     def setBuildingType(self, building_type: BuildingType) -> None:
         self._building_type = building_type
-        self.blocks = turnBlocks(self._building_type.blocks, self._angle)
+        self._btype_variant = choice(list(self._building_type.blocks))
+        self.blocks = turnBlocks(
+            self._building_type.blocks[self._btype_variant], self._angle)
         self.generateVariants()
-        self.blocks_variants = turnBlocks(self._blocks_variants, self._angle)
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
@@ -280,7 +311,8 @@ class ProjectedBuilding:
                 f'Buildings can turn on 90 or -90 degrees, not {delta_angle}')
 
         self._angle = (self._angle + delta_angle) % 360
-        self.blocks = turnBlocks(self._building_type.blocks, self._angle)
+        self.blocks = turnBlocks(
+            self._building_type.blocks[self._btype_variant], self._angle)
         self.blocks_variants = turnBlocks(self._blocks_variants, self._angle)
 
 
