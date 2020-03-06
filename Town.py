@@ -7,6 +7,7 @@ from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
                          matrixHeight, Block)
 
 from json import load
+from pprint import pprint
 
 
 def isometric(x: float, y: float) -> QPointF:
@@ -15,7 +16,6 @@ def isometric(x: float, y: float) -> QPointF:
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
     return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
                    ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH))) / 2
-
 
 
 class Chunk:
@@ -136,7 +136,7 @@ class ProjectedBuilding:
     def __init__(self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
         self._angle = 0
-        self.btype_variant, self.blocks_variants = self._building_type.generateVariant()
+        self._btype_variant, self.blocks_variants = building_type.generateVariant()
         self.blocks = building_type.blocks[self._btype_variant]
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
@@ -147,6 +147,8 @@ class ProjectedBuilding:
         iso_y = round(self.isometric.y())
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.9)
+
+        pprint(self.blocks_variants)
 
         for block_y in range(height):
             for block_x in range(len(self.blocks)):
@@ -165,9 +167,9 @@ class ProjectedBuilding:
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),
                  self._angle, self.town, self._building_type, self.blocks_variants, self._btype_variant)
-        self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
-        self.blocks = turnMatrix(
-            self._building_type[self.btype_variant], self._angle)
+        # self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
+        # self.blocks = turnMatrix(
+        #     self._building_type.blocks[self._btype_variant], self._angle)
 
     def destroy(self) -> None:
         del self
@@ -176,7 +178,7 @@ class ProjectedBuilding:
         self._building_type = building_type
         self._btype_variant, self.blocks = self._building_type.generateVariant()
         self.blocks = turnMatrix(
-            self._building_type.blocks[self.btype_variant], self._angle)
+            self._building_type.blocks[self._btype_variant], self._angle)
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
@@ -184,8 +186,9 @@ class ProjectedBuilding:
                 f'Buildings can turn on 90 or -90 degrees, not {delta_angle}')
 
         self._angle = (self._angle + delta_angle) % 360
-        self.blocks = turnMatrix(self.blocks, delta_angle)
-        self.blocks_variants = turnMatrix(self.blocks_variants, delta_angle)
+        self.blocks = turnMatrix(self.blocks, delta_angle % 360)
+        self.blocks_variants = turnMatrix(
+            self.blocks_variants, delta_angle % 360)
 
 
 class Town:

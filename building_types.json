@@ -20,7 +20,7 @@
                         "roof"
                     ],
                     [
-                        "house_door_2",
+                        "house_door!south_door",
                         "house",
                         "roof"
                     ]
@@ -29,7 +29,7 @@
             "another": [
                 [
                     [
-                        "house_door",
+                        "house_door:south_door",
                         "roof"
                     ],
                     [

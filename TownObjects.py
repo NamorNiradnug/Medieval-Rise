@@ -76,40 +76,73 @@ Grounds = GroundsManager()
 class BuildingType:
     """Store information about some building type."""
 
-    def __init__(self, blocks: {str: (((Block, ...), ...), ...)}, possible_variants: {str: ((((str, ...), ...), ...), ...)} = None):
+    def __init__(self, blocks: {str: [[[str, ...], ...], ...]} = None):
         self.blocks = {}
-        self.possible_variants = possible_variants
-        if possible_variants is None:
-            pass
-            # TODO !!!!!!
+        self.possible_variants = {}
+
         for variant in blocks:
-            height = matrixHeight(blocks[variant])
+            self.blocks[variant] = []
+            self.possible_variants[variant] = []
+
+            for x in range(len(blocks[variant])):
+                self.blocks[variant] += [[]]
+                self.possible_variants[variant] += [[]]
+
+                for y in range(len(blocks[variant][x])):
+                    self.blocks[variant][x] += [[]]
+                    self.possible_variants[variant][x] += [[]]
+
+                    for z in range(len(blocks[variant][x][y])):
+                        self.blocks[variant][x][y] += [None]
+                        self.possible_variants[variant][x][y] += [None]
+
+                        data = blocks[variant][x][y][z]
+                        if '!' in data:
+                            data = data.split('!')
+                            self.possible_variants[variant][x][y][z] = \
+                                tuple(set(Blocks.__getattr__(data[0]).variants).difference(
+                                    set(data[1].split(';'))))
+                        elif ':' in data:
+                            data = data.split(':')
+                            self.possible_variants[variant][x][y][z] = \
+                                tuple(data[1].split(';'))
+                        else:
+                            data = [data]
+                            self.possible_variants[variant][x][y][z] = tuple(
+                                Blocks.__getattr__(data[0]).variants)
+
+                        self.blocks[variant][x][y][z] = Blocks.__getattr__(
+                            data[0])
+
+                    self.blocks[variant][x][y] = tuple(
+                        self.blocks[variant][x][y])
+                    self.possible_variants[variant][x][y] = tuple(
+                        self.possible_variants[variant][x][y])
+
+                self.blocks[variant][x] = tuple(self.blocks[variant][x])
+                self.possible_variants[variant][x] = tuple(
+                    self.possible_variants[variant][x])
+
+            height = matrixHeight(self.blocks[variant])
             # convert blocks to rectangular matrix
-            self.blocks[variant] = tuple([blocks_y + ((None,), ) * (height - len(blocks_y))
-                                          for blocks_y in blocks[variant]])
+            self.blocks[variant] = tuple(blocks_y + ((None,), ) * (height - len(blocks_y))
+                                         for blocks_y in self.blocks[variant])
+            self.possible_variants[variant] = tuple(blocks_y + ((None,), ) * (height - len(blocks_y))
+                                                    for blocks_y in self.possible_variants[variant])
 
     def generateVariant(self) -> (str, (((str, ...), ...), ...)):
         btype_variant = choice(list(self.blocks))
         return btype_variant, tuple(
             tuple(
-                tuple(choice(self.possible_variants[btype_variant][x][y][z]) if block else None
-                      for block in self.blocks[btype_variant][x][y])
+                tuple(
+                    choice(self.possible_variants[btype_variant][x][y][z])
+                    if self.blocks[btype_variant][x][y][z] else None
+                    for z in range(len(self.blocks[btype_variant][x][y])))
                 for y in range(matrixHeight(self.blocks[btype_variant])))
             for x in range(len(self.blocks[btype_variant])))
 
 
-loaded_bt_data = load(open('building_types.json'))
-BUILDING_TYPES_DATA = loaded_bt_data.copy()
-
-for item in loaded_bt_data:
-    for variant in loaded_bt_data[item]['blocks']:
-        for x in range(len(loaded_bt_data[item]['blocks'][variant])):
-            for y in range(len(loaded_bt_data[item]['blocks'][variant][x])):
-                for z in range(len(loaded_bt_data[item]['blocks'][variant][x][y])):
-                    data = loaded_bt_data[item]['blocks'][variant][x][y][z]
-                    BUILDING_TYPES_DATA[item]['blocks'][variant][x][y][z] = \
-                        Blocks.__getattr__(
-                            loaded_bt_data[item]['blocks'][variant][x][y][z])
+BUILDING_TYPES_DATA = load(open('building_types.json'))
 
 
 class BuildingTypeManager:
@@ -117,14 +150,9 @@ class BuildingTypeManager:
        Use BuildingTypes.bt_name to get BuildingType called 'bt_name'.
        Use BuildingType.getByNumber(num) to get BuildingType with number 'num'."""
 
-    building_types = {item: BuildingType({
-        variant:
-            tuple((
-                tuple((
-                    tuple(block_y) for block_y in blocks_x
-                )) for blocks_x in BUILDING_TYPES_DATA[item]['blocks'][variant]
-            )) for variant in BUILDING_TYPES_DATA[item]['blocks']
-    }) for item in BUILDING_TYPES_DATA}
+    building_types = {item: BuildingType(BUILDING_TYPES_DATA[item]['blocks'])
+                      for item in BUILDING_TYPES_DATA}
+
     sorted_names = sorted(building_types)
 
     def getByNumber(self, number: int) -> BuildingType:

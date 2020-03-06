@@ -1,34 +1,26 @@
 {
-    "house_door_2": {
-        "0": {
-            "NORTH": "wood_cross",
-            "EAST": "stone_diag",
-            "SOUTH": "wood",
-            "WEST": "wood_door"
-        }
-    },
     "house_door": {
-        "0": {
+        "south_door": {
             "NORTH": "stone_diag",
             "EAST": "wood_window",
             "SOUTH": "wood_door",
             "WEST": "wood_window"
         },
-        "1": {
+        "east_door": {
             "NORTH": "wood_window",
-            "EAST": "stone_diag",
-            "SOUTH": "wood_door",
+            "EAST": "wood_door",
+            "SOUTH": "wood",
             "WEST": "wood_cross"
         }
     },
     "house": {
-        "0": {
+        "first": {
             "NORTH": "wood_cross",
             "EAST": "wood_cross",
             "SOUTH": "wood",
             "WEST": "wood_window"
         },
-        "1": {
+        "second": {
             "NORTH": "stone_diag",
             "EAST": "wood_window",
             "SOUTH": "wood_window",
@@ -36,13 +28,13 @@
         }
     },
     "roof": {
-        "0": {
+        "lol": {
             "NORTH": "roof_n",
             "EAST": "roof_w",
             "SOUTH": "roof_n",
             "WEST": "roof_w"
         },
-        "1": {
+        "kek": {
             "NORTH": "roof_w",
             "EAST": "roof_n",
             "SOUTH": "roof_w",
