@@ -28,9 +28,9 @@
         },
         "third": {
             "NORTH": "stone_cross",
-            "EAST": "stone_cross",
-            "SOUTH": "stone_cross",
-            "WEST": "stone_cross"
+            "EAST": "wood_window",
+            "SOUTH": "wood",
+            "WEST": "stone_diag"
         }
     },
     "roof": {
