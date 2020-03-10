@@ -21,12 +21,24 @@ class Block:
     """Store data of block."""
 
     def __init__(self, name: str):
+        self.name = name
+
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
         self.variants = {i: {j * 90: (getImage(f'{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left'),
                                       getImage(f'{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right'))
                              for j in range(4)} for i in BLOCKS_DATA[name]}
 
+    def __repr__(self):
+        return f'Block {self.name}'
+
+    def __str__(self):
+        return f'Block {self.name}'
+
     def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: str) -> None:
+        if variant not in self.variants:
+            raise AttributeError(
+                f'Block called {self.name} has not variant {variant}.')
+
         painter.drawImage(x - ISOMETRIC_WIDTH, y -
                           ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2,

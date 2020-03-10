@@ -5,7 +5,7 @@ from types import FunctionType
 
 from PyQt5.QtCore import QPoint, QRect, QRectF, QSize, Qt
 from PyQt5.QtGui import (QCloseEvent, QIcon, QImage, QKeyEvent, QMouseEvent,
-                         QPainter, QPaintEvent, QPixmap, QWheelEvent)
+                         QPainter, QPaintEvent, QPixmap, QWheelEvent, QCursor)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
@@ -105,6 +105,7 @@ class Frame(QMainWindow):
             self.choosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(self.choosen_btype))
             self.cursor().setPos(self.width() / 2, self.height() / 2)
+            self.setCursor(QCursor(QPixmap(32, 32)))
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:

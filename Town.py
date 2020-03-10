@@ -7,7 +7,6 @@ from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
                          matrixHeight, Block)
 
 from json import load
-from pprint import pprint
 
 
 def isometric(x: float, y: float) -> QPointF:
@@ -72,15 +71,13 @@ def turnMatrix(blocks: ((object, ...), ...), angle: int) -> ((object, ...), ...)
     if angle == 0:
         return blocks
     elif angle == 90:
-        # blocks[i][j] is building_type.blocks[j][i]
-        return tuple([tuple([blocks[j][i] for j in range(len(blocks))])
-                      for i in range(height)])
+        return tuple(tuple(blocks[-j - 1][i] for j in range(len(blocks)))
+                     for i in range(height))
     elif angle == 180:
-        return tuple([blocks[i][::-1]
-                      for i in range(len(blocks))])[::-1]
+        return tuple(tuple(blocks[-i - 1][-j - 1] for j in range(height)) for i in range(len(blocks)))
     else:
-        return tuple([tuple([blocks[-j - 1][-i - 1] for j in range(len(blocks))])
-                      for i in range(height)])
+        return tuple(tuple(blocks[j][-i - 1] for j in range(len(blocks)))
+                     for i in range(height))
 
 
 class TownObject:
@@ -97,7 +94,7 @@ class TownObject:
 
 
 class Building(TownObject):
-    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: (((int, ...), ...), ...), btype_variant: str):
+    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: (((str, ...), ...), ...), btype_variant: str):
         super().__init__(x, y, angle, town, building_type)
         self.building_type = building_type
         self.btype_variant = btype_variant
@@ -123,7 +120,7 @@ class Building(TownObject):
         self.town.buildings.remove(self)
         del self
 
-    def getBlock(self, x: int, y: int, z: int) -> (Block, int):
+    def getBlock(self, x: int, y: int, z: int) -> (Block, int, str):
         return (self.blocks[x - self.x][y - self.y][z], self.angle,
                 self.blocks_variants[x - self.x][y - self.y][z])
 
@@ -136,8 +133,7 @@ class ProjectedBuilding:
     def __init__(self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
         self._angle = 0
-        self._btype_variant, self.blocks_variants = building_type.generateVariant()
-        self.blocks = building_type.blocks[self._btype_variant]
+        self.generateVariants()
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
 
@@ -147,8 +143,6 @@ class ProjectedBuilding:
         iso_y = round(self.isometric.y())
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(.9)
-
-        pprint(self.blocks_variants)
 
         for block_y in range(height):
             for block_x in range(len(self.blocks)):
@@ -167,18 +161,20 @@ class ProjectedBuilding:
     def build(self) -> None:
         Building(round(self.isometric.x()), round(self.isometric.y()),
                  self._angle, self.town, self._building_type, self.blocks_variants, self._btype_variant)
-        # self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
-        # self.blocks = turnMatrix(
-        #     self._building_type.blocks[self._btype_variant], self._angle)
+        self.generateVariants()
 
     def destroy(self) -> None:
         del self
 
-    def setBuildingType(self, building_type: BuildingType) -> None:
-        self._building_type = building_type
-        self._btype_variant, self.blocks = self._building_type.generateVariant()
+    def generateVariants(self):
+        self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
+        self.blocks_variants = turnMatrix(self.blocks_variants, self._angle)
         self.blocks = turnMatrix(
             self._building_type.blocks[self._btype_variant], self._angle)
+
+    def setBuildingType(self, building_type: BuildingType) -> None:
+        self._building_type = building_type
+        self.generateVariants()
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
