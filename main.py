@@ -39,6 +39,12 @@ class Modes(Enum):
     TownBuilder = 1
 
 
+def transparentCursor() -> QCursor:
+    pix = QPixmap(32, 32)
+    pix.fill(Qt.transparent)
+    return QCursor(pix)
+
+
 class Frame(QMainWindow):
     def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
         super().__init__()
@@ -105,7 +111,7 @@ class Frame(QMainWindow):
             self.choosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(self.choosen_btype))
             self.cursor().setPos(self.width() / 2, self.height() / 2)
-            self.setCursor(QCursor(QPixmap(32, 32)))
+            self.setCursor(transparentCursor())
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
@@ -134,6 +140,7 @@ class Frame(QMainWindow):
                 self.choosen_building.destroy()
                 self.choosen_building = None
                 self.mode = Modes.Town
+                self.setCursor(QCursor())
 
             if self.mode == Modes.Town:
                 # open pause menu
