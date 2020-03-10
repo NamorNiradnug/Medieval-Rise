@@ -40,5 +40,21 @@
                 ]
             ]
         }
+    },
+    "some_house": {
+        "blocks": {
+            "first": [
+                [
+                    [
+                        "house_door:south_door",
+                        "roof"
+                    ],
+                    [
+                        "house_door:east_door",
+                        "roof"
+                    ]
+                ]
+            ]
+        }
     }
 }

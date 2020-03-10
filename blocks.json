@@ -25,6 +25,12 @@
             "EAST": "wood_window",
             "SOUTH": "wood_window",
             "WEST": "wood_cross"
+        },
+        "third": {
+            "NORTH": "stone_cross",
+            "EAST": "stone_cross",
+            "SOUTH": "stone_cross",
+            "WEST": "stone_cross"
         }
     },
     "roof": {
