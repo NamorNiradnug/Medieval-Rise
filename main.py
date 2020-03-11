@@ -5,16 +5,7 @@ from types import FunctionType
 from typing import Tuple
 
 from PyQt5.QtCore import QPoint, QSize, Qt
-from PyQt5.QtGui import (
-    QCloseEvent,
-    QKeyEvent,
-    QMouseEvent,
-    QPainter,
-    QPaintEvent,
-    QPixmap,
-    QWheelEvent,
-    QCursor,
-)
+from PyQt5.QtGui import QCloseEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPixmap, QWheelEvent, QCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
@@ -76,10 +67,9 @@ class Frame(QMainWindow):
 
     def buildProjectedBuilding(self):
         if self.town.isBlocksEmpty(
-            round(self.choosen_building.isometric.x()),
-            round(self.choosen_building.isometric.y()),
-            self.choosen_building.blocks,
-        ):
+                round(self.choosen_building.isometric.x()),
+                round(self.choosen_building.isometric.y()),
+                self.choosen_building.blocks):
             self.choosen_building.build()
 
     def setSize(self, size: QSize) -> None:
@@ -183,10 +173,8 @@ class Frame(QMainWindow):
         if self.last_button == Qt.NoButton and not isPointInRect(
             cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))
         ):
-            delta = QPoint(
-                (cursor_pos.x() - self.size().width() // 2) / 40,
-                (cursor_pos.y() - self.size().height() // 2) / 34,
-            )
+            delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
+                           (cursor_pos.y() - self.size().height() // 2) / 34)
             self.town.translate(-delta)
 
 
