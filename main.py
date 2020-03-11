@@ -2,20 +2,29 @@
 from enum import Enum
 from threading import Event, Thread
 from types import FunctionType
+from typing import Tuple
 
-from PyQt5.QtCore import QPoint, QRect, QRectF, QSize, Qt
-from PyQt5.QtGui import (QCloseEvent, QIcon, QImage, QKeyEvent, QMouseEvent,
-                         QPainter, QPaintEvent, QPixmap, QWheelEvent, QCursor)
+from PyQt5.QtCore import QPoint, QSize, Qt
+from PyQt5.QtGui import (
+    QCloseEvent,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPixmap,
+    QWheelEvent,
+    QCursor,
+)
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
 
-from resources_manager import getImage
 
-
-def isPointInRect(point: QPoint, rect: (QPoint, QSize)) -> bool:
-    return rect[0].x() <= point.x() <= rect[0].x() + rect[1].width() and \
-        rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
+    return (
+        rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
+        and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+    )
 
 
 class Interval(Thread):
@@ -35,6 +44,7 @@ class Interval(Thread):
 
 class Modes(Enum):
     """Modes for Frame."""
+
     Town = 0
     TownBuilder = 1
 
@@ -47,7 +57,7 @@ def transparentCursor() -> QCursor:
 
 class Frame(QMainWindow):
     def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
-        super().__init__()
+        super().__init__(flags=[])
         self.setSize(size)
         self.setMouseTracking(True)
 
@@ -66,9 +76,10 @@ class Frame(QMainWindow):
 
     def buildProjectedBuilding(self):
         if self.town.isBlocksEmpty(
-                round(self.choosen_building.isometric.x()),
-                round(self.choosen_building.isometric.y()),
-                self.choosen_building.blocks):
+            round(self.choosen_building.isometric.x()),
+            round(self.choosen_building.isometric.y()),
+            self.choosen_building.blocks,
+        ):
             self.choosen_building.build()
 
     def setSize(self, size: QSize) -> None:
@@ -109,23 +120,28 @@ class Frame(QMainWindow):
         if event_key == Qt.Key_B:
             self.mode = Modes.TownBuilder
             self.choosen_building = Town.ProjectedBuilding(
-                self.town, Town.BuildingTypes.getByNumber(self.choosen_btype))
+                self.town, Town.BuildingTypes.getByNumber(self.choosen_btype)
+            )
             self.cursor().setPos(self.width() / 2, self.height() / 2)
             self.setCursor(transparentCursor())
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (
-                    self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(
-                    self.choosen_btype))
+                self.choosen_btype = (self.choosen_btype + 1) % len(
+                    Town.BuildingTypes.sorted_names
+                )
+                self.choosen_building.setBuildingType(
+                    Town.BuildingTypes.getByNumber(self.choosen_btype)
+                )
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (
-                    self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(
-                    self.choosen_btype))
+                self.choosen_btype = (self.choosen_btype - 1) % len(
+                    Town.BuildingTypes.sorted_names
+                )
+                self.choosen_building.setBuildingType(
+                    Town.BuildingTypes.getByNumber(self.choosen_btype)
+                )
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
@@ -151,10 +167,12 @@ class Frame(QMainWindow):
         self.town.draw(painter, self.size())
 
         if self.mode == Modes.TownBuilder:
-            cursor_pos = (self.cursor().pos() - QPoint(self.width(), self.height()) /
-                          2) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
+            cursor_pos = (
+                self.cursor().pos() - QPoint(self.width(), self.height()) / 2
+            ) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
             self.choosen_building.isometric = Town.isometric(
-                cursor_pos.x(), cursor_pos.y())
+                cursor_pos.x(), cursor_pos.y()
+            )
             self.choosen_building.draw(painter, self.size())
 
         painter.end()
@@ -162,17 +180,20 @@ class Frame(QMainWindow):
     def mousePositionEvent(self) -> None:
         cursor_pos = self.cursor().pos()
 
-        if self.last_button == Qt.NoButton and \
-                not isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
-            delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
-                           (cursor_pos.y() - self.size().height() // 2) / 34)
+        if self.last_button == Qt.NoButton and not isPointInRect(
+            cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))
+        ):
+            delta = QPoint(
+                (cursor_pos.x() - self.size().width() // 2) / 40,
+                (cursor_pos.y() - self.size().height() // 2) / 34,
+            )
             self.town.translate(-delta)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication([])
     town = Town.Town()
     frame = Frame(town)
-    frame.setWindowTitle('Medieval Rise')
+    frame.setWindowTitle("Medieval Rise")
     frame.showFullScreen()
     app.exec_()

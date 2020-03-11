@@ -1,3 +1,5 @@
+from typing import Any, Tuple, List, Dict, Optional
+
 from resources_manager import getImage
 
 from PyQt5.QtGui import QPainter
@@ -6,14 +8,14 @@ from json import load
 from random import choice
 
 
-ISOMETRIC_WIDTH = 64    # |
+ISOMETRIC_WIDTH = 64  # |
 ISOMETRIC_HEIGHT1 = 64  # | textures parameters
 ISOMETRIC_HEIGHT2 = 79  # |
 
-BLOCKS_DATA = load(open('blocks.json'))
+BLOCKS_DATA = load(open("blocks.json"))
 
 
-def matrixHeight(matrix: ((object, ...), ...)) -> int:
+def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
     return max([len(blocks_y) for blocks_y in matrix])
 
 
@@ -24,25 +26,34 @@ class Block:
         self.name = name
 
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
-        self.variants = {i: {j * 90: (getImage(f'{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left'),
-                                      getImage(f'{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right'))
-                             for j in range(4)} for i in BLOCKS_DATA[name]}
+        self.variants = {
+            i: {
+                j
+                * 90: (
+                    getImage(f"{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left"),
+                    getImage(f"{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right"),
+                )
+                for j in range(4)
+            }
+            for i in BLOCKS_DATA[name]
+        }
 
     def __repr__(self):
-        return f'Block {self.name}'
+        return f"Block {self.name}"
 
     def __str__(self):
-        return f'Block {self.name}'
+        return f"Block {self.name}"
 
-    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: str) -> None:
+    def draw(
+        self, x: float, y: float, angle: int, painter: QPainter, variant: str
+    ) -> None:
         if variant not in self.variants:
-            raise AttributeError(
-                f'Block called {self.name} has not variant {variant}.')
+            raise AttributeError(f"Block called {self.name} has not variant {variant}.")
 
-        painter.drawImage(x - ISOMETRIC_WIDTH, y -
-                          ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
-        painter.drawImage(x, y - ISOMETRIC_HEIGHT2,
-                          self.variants[variant][angle][1])
+        painter.drawImage(
+            x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0]
+        )
+        painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
 
 
 class BlocksManager:
@@ -74,7 +85,7 @@ class GroundsManager:
     """Store all grounds.
         Use Grounds.ground_name to get Ground(ground_name)."""
 
-    grounds = {name: Ground(name) for name in ('grass', )}
+    grounds = {name: Ground(name) for name in ("grass",)}
 
     def __getattr__(self, item):
         if item in self.grounds:
@@ -88,7 +99,7 @@ Grounds = GroundsManager()
 class BuildingType:
     """Store information about some building type."""
 
-    def __init__(self, blocks: {str: [[[str, ...], ...], ...]} = None):
+    def __init__(self, blocks: Dict[List[List[List[str]]]] = None):
         self.blocks = {}
         self.possible_variants = {}
 
@@ -109,52 +120,67 @@ class BuildingType:
                         self.possible_variants[variant][x][y] += [None]
 
                         data = blocks[variant][x][y][z]
-                        if '!' in data:
-                            data = data.split('!')
-                            self.possible_variants[variant][x][y][z] = \
-                                tuple(set(Blocks.__getattr__(data[0]).variants).difference(
-                                    set(data[1].split(';'))))
-                        elif ':' in data:
-                            data = data.split(':')
-                            self.possible_variants[variant][x][y][z] = \
-                                tuple(data[1].split(';'))
+                        if "!" in data:
+                            data = data.split("!")
+                            self.possible_variants[variant][x][y][z] = tuple(
+                                set(Blocks.__getattr__(data[0]).variants).difference(
+                                    set(data[1].split(";"))
+                                )
+                            )
+                        elif ":" in data:
+                            data = data.split(":")
+                            self.possible_variants[variant][x][y][z] = tuple(
+                                data[1].split(";")
+                            )
                         else:
                             data = [data]
                             self.possible_variants[variant][x][y][z] = tuple(
-                                Blocks.__getattr__(data[0]).variants)
+                                Blocks.__getattr__(data[0]).variants
+                            )
 
-                        self.blocks[variant][x][y][z] = Blocks.__getattr__(
-                            data[0])
+                        self.blocks[variant][x][y][z] = Blocks.__getattr__(data[0])
 
-                    self.blocks[variant][x][y] = tuple(
-                        self.blocks[variant][x][y])
+                    self.blocks[variant][x][y] = tuple(self.blocks[variant][x][y])
                     self.possible_variants[variant][x][y] = tuple(
-                        self.possible_variants[variant][x][y])
+                        self.possible_variants[variant][x][y]
+                    )
 
                 self.blocks[variant][x] = tuple(self.blocks[variant][x])
                 self.possible_variants[variant][x] = tuple(
-                    self.possible_variants[variant][x])
+                    self.possible_variants[variant][x]
+                )
 
             height = matrixHeight(self.blocks[variant])
             # convert blocks to rectangular matrix
-            self.blocks[variant] = tuple(blocks_y + ((None,), ) * (height - len(blocks_y))
-                                         for blocks_y in self.blocks[variant])
-            self.possible_variants[variant] = tuple(blocks_y + ((None,), ) * (height - len(blocks_y))
-                                                    for blocks_y in self.possible_variants[variant])
+            self.blocks[variant] = tuple(
+                blocks_y + ((None,),) * (height - len(blocks_y))
+                for blocks_y in self.blocks[variant]
+            )
+            self.possible_variants[variant] = tuple(
+                blocks_y + ((None,),) * (height - len(blocks_y))
+                for blocks_y in self.possible_variants[variant]
+            )
 
-    def generateVariant(self) -> (str, (((str, ...), ...), ...)):
+    def generateVariant(self) -> Tuple[Any, Tuple[Tuple[Tuple[Optional[Any]]]]]:
         btype_variant = choice(list(self.blocks))
-        return btype_variant, tuple(
+        return (
+            btype_variant,
             tuple(
                 tuple(
-                    choice(self.possible_variants[btype_variant][x][y][z])
-                    if self.blocks[btype_variant][x][y][z] else None
-                    for z in range(len(self.blocks[btype_variant][x][y])))
-                for y in range(matrixHeight(self.blocks[btype_variant])))
-            for x in range(len(self.blocks[btype_variant])))
+                    tuple(
+                        choice(self.possible_variants[btype_variant][x][y][z])
+                        if self.blocks[btype_variant][x][y][z]
+                        else None
+                        for z in range(len(self.blocks[btype_variant][x][y]))
+                    )
+                    for y in range(matrixHeight(self.blocks[btype_variant]))
+                )
+                for x in range(len(self.blocks[btype_variant]))
+            ),
+        )
 
 
-BUILDING_TYPES_DATA = load(open('building_types.json'))
+BUILDING_TYPES_DATA = load(open("building_types.json"))
 
 
 class BuildingTypeManager:
@@ -162,8 +188,10 @@ class BuildingTypeManager:
        Use BuildingTypes.bt_name to get BuildingType called 'bt_name'.
        Use BuildingType.getByNumber(num) to get BuildingType with number 'num'."""
 
-    building_types = {item: BuildingType(BUILDING_TYPES_DATA[item]['blocks'])
-                      for item in BUILDING_TYPES_DATA}
+    building_types = {
+        item: BuildingType(BUILDING_TYPES_DATA[item]["blocks"])
+        for item in BUILDING_TYPES_DATA
+    }
 
     sorted_names = sorted(building_types)
 
@@ -172,7 +200,7 @@ class BuildingTypeManager:
 
     def __getattr__(self, item: str):
         if item not in self.building_types:
-            raise AttributeError(f'Building type "{item}" does not exests.')
+            raise AttributeError(f'Building type "{item}" does not exists.')
 
         return self.building_types[item]
 
