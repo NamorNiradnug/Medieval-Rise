@@ -1,31 +1,18 @@
-from __future__ import annotations
 from typing import Tuple, Any
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
 
-from TownObjects import (
-    ISOMETRIC_HEIGHT1,
-    ISOMETRIC_HEIGHT2,
-    ISOMETRIC_WIDTH,
-    Grounds,
-    BuildingTypes,
-    BuildingType,
-    Block,
-)
+from TownObjects import ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH, Grounds, BuildingTypes, BuildingType,\
+    Block
 
 
 def isometric(x: float, y: float) -> QPointF:
     """Convert rectangular coordinates to isometric."""
     # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
-    return (
-        QPointF(
-            ((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
-            ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH)),
-        )
-        / 2
-    )
+    return (QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)), ((y / (ISOMETRIC_HEIGHT1 / 2)) -
+                                                                              (x / ISOMETRIC_WIDTH)),) / 2)
 
 
 class Chunk:
@@ -43,11 +30,8 @@ class Chunk:
         # Draw the ground.
         for i in range(16):
             for j in range(16):
-                self.grounds[i][j].draw(
-                    (self.x + i - self.y - j) * ISOMETRIC_WIDTH - x,
-                    (self.x + self.y + i + j) * (ISOMETRIC_HEIGHT1 / 2) - y,
-                    painter,
-                )
+                self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                                        (ISOMETRIC_HEIGHT1 / 2) - y, painter)
 
         if self.is_empty:
             return
@@ -58,18 +42,9 @@ class Chunk:
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
-                        block, angle, variant = building.getBlock(
-                            i + self.x, j + self.y, z
-                        )
-                        block.draw(
-                            (self.x + i - self.y - j) * ISOMETRIC_WIDTH - x,
-                            (self.x + self.y + i + j) * (ISOMETRIC_HEIGHT1 / 2)
-                            - z * ISOMETRIC_HEIGHT2
-                            - y,
-                            angle,
-                            painter,
-                            variant,
-                        )
+                        block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
+                        block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                                   (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
 
 
 class TownObjectType:
@@ -88,24 +63,18 @@ def turnMatrix(blocks: Tuple[Tuple[Any]], angle: int) -> Tuple[Tuple[Any]]:
     if angle == 0:
         return blocks
     elif angle == 90:
-        return tuple(
-            tuple(blocks[-j - 1][i] for j in range(len(blocks))) for i in range(height)
-        )
+        return tuple(tuple(blocks[-j - 1][i] for j in range(len(blocks))) for i in range(height))
     elif angle == 180:
-        return tuple(
-            tuple(blocks[-i - 1][-j - 1] for j in range(height))
-            for i in range(len(blocks))
-        )
+        return tuple(tuple(blocks[-i - 1][-j - 1] for j in range(height))
+                     for i in range(len(blocks)))
     else:
-        return tuple(
-            tuple(blocks[j][-i - 1] for j in range(len(blocks))) for i in range(height)
-        )
+        return tuple(tuple(blocks[j][-i - 1] for j in range(len(blocks))) for i in range(height))
 
 
 class TownObject:
     """Object of Town."""
 
-    def __init__(self, x: int, y: int, angle: int, town: Town):
+    def __init__(self, x: int, y: int, angle: int, town: 'Town'):
         if angle not in {0, 90, 180, 270}:
             raise AttributeError("Angle must be 0, 90, 180 or 270, not", angle)
 
@@ -116,16 +85,8 @@ class TownObject:
 
 
 class Building(TownObject):
-    def __init__(
-        self,
-        x: int,
-        y: int,
-        angle: int,
-        town,
-        building_type: BuildingType,
-        blocks_variants: Tuple[Tuple[Tuple[str]]],
-        btype_variant: str,
-    ):
+    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType,
+                 blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
         self.btype_variant = btype_variant
@@ -161,9 +122,7 @@ class ProjectedBuilding:
 
     # TODO more comfortable choosing of type.
 
-    def __init__(
-        self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)
-    ):
+    def __init__(self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
         self._angle = 0
         self.blocks = None
@@ -177,6 +136,7 @@ class ProjectedBuilding:
         height = len(self.blocks[0])
         iso_x = round(self.isometric.x())
         iso_y = round(self.isometric.y())
+        painter.save()
         painter.scale(self.town.scale, self.town.scale)
         painter.setOpacity(0.9)
 
@@ -185,19 +145,12 @@ class ProjectedBuilding:
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     block = self.blocks[block_x][block_y][block_z]
                     if block is not None:
-                        block.draw(
-                            (iso_x + block_x - block_y - iso_y) * ISOMETRIC_WIDTH
-                            - self.town.cam_x
-                            + self.town.cam_z * screen_size.width() / 2,
-                            (iso_x + iso_y + block_x + block_y)
-                            * (ISOMETRIC_HEIGHT1 / 2)
-                            - self.town.cam_y
-                            - block_z * ISOMETRIC_HEIGHT2
-                            + screen_size.height() * self.town.cam_z / 2,
-                            self._angle,
-                            painter,
-                            self.blocks_variants[block_x][block_y][block_z],
-                        )
+                        block.draw((iso_x + block_x - block_y - iso_y) * ISOMETRIC_WIDTH - self.town.cam_x +
+                                   self.town.cam_z * screen_size.width() / 2, (iso_x + iso_y + block_x + block_y) *
+                                   (ISOMETRIC_HEIGHT1 / 2) - self.town.cam_y - block_z * ISOMETRIC_HEIGHT2 +
+                                   screen_size.height() * self.town.cam_z / 2, self._angle, painter,
+                                   self.blocks_variants[block_x][block_y][block_z])
+        painter.restore()
 
     def getAngle(self) -> int:
         return self._angle
@@ -218,10 +171,7 @@ class ProjectedBuilding:
         del self
 
     def generateVariants(self):
-        (
-            self._btype_variant,
-            self.blocks_variants,
-        ) = self._building_type.generateVariant()
+        self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
         self.blocks_variants = turnMatrix(self.blocks_variants, self._angle)
         self.blocks = turnMatrix(
             self._building_type.blocks[self._btype_variant], self._angle
@@ -261,29 +211,22 @@ class Town:
         x = self.cam_x - (self.cam_z * size.width()) // 2
         y = self.cam_y - (self.cam_z * size.height()) // 2
 
+        painter.save()
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if (
-                    -16 * ISOMETRIC_WIDTH
-                    < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x)
-                    < size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH
-                    and -32 * ISOMETRIC_HEIGHT1 / 2
-                    < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y)
-                    < size.height() * self.cam_z
-                ):
+                if (-16 * ISOMETRIC_WIDTH < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <
+                    size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
+                    -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
+                        size.height() * self.cam_z):
                     chunk.draw(painter, x, y)
-        painter.scale(self.cam_z, self.cam_z)
+        painter.restore()
 
-    def isBlocksEmpty(
-        self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]]
-    ) -> bool:
+    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]]) -> bool:
         for y in range(len(blocks[0])):
             for x in range(len(blocks)):
                 for z in range(len(blocks[x][y])):
-                    if blocks[x][y][z] is not None and not self.isBlockEmpty(
-                        x + iso_x, y + iso_y, z
-                    ):
+                    if blocks[x][y][z] is not None and not self.isBlockEmpty(x + iso_x, y + iso_y, z):
                         return False
         return True
 
@@ -292,9 +235,8 @@ class Town:
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
         self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
-        self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][
-            y // 16
-        ].blocks == tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)])
+        self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
+            tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)])
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = -event.angleDelta().y() / (self.scale * 480)

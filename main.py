@@ -48,7 +48,7 @@ def transparentCursor() -> QCursor:
 
 class Frame(QMainWindow):
     def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
-        super().__init__(flags=[])
+        super().__init__()
         self.setSize(size)
         self.setMouseTracking(True)
 
@@ -117,21 +117,13 @@ class Frame(QMainWindow):
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (self.choosen_btype + 1) % len(
-                    Town.BuildingTypes.sorted_names
-                )
-                self.choosen_building.setBuildingType(
-                    Town.BuildingTypes.getByNumber(self.choosen_btype)
-                )
+                self.choosen_btype = (self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
+                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.choosen_btype))
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (self.choosen_btype - 1) % len(
-                    Town.BuildingTypes.sorted_names
-                )
-                self.choosen_building.setBuildingType(
-                    Town.BuildingTypes.getByNumber(self.choosen_btype)
-                )
+                self.choosen_btype = (self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
+                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.choosen_btype))
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
@@ -158,21 +150,19 @@ class Frame(QMainWindow):
 
         if self.mode == Modes.TownBuilder:
             cursor_pos = (
-                self.cursor().pos() - QPoint(self.width(), self.height()) / 2
-            ) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
-            self.choosen_building.isometric = Town.isometric(
-                cursor_pos.x(), cursor_pos.y()
-            )
+                self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
+                QPoint(self.town.cam_x, self.town.cam_y)
+            self.choosen_building.isometric = Town.isometric(cursor_pos.x(), cursor_pos.y())
             self.choosen_building.draw(painter, self.size())
+            Town.BuildingTypes.getByNumber(self.choosen_btype).drawDefault(self.width() - 125, 250, painter)
 
         painter.end()
 
     def mousePositionEvent(self) -> None:
         cursor_pos = self.cursor().pos()
 
-        if self.last_button == Qt.NoButton and not isPointInRect(
-            cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))
-        ):
+        if self.last_button == Qt.NoButton \
+           and not isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
             delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
                            (cursor_pos.y() - self.size().height() // 2) / 34)
             self.town.translate(-delta)

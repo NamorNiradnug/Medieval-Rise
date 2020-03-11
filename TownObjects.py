@@ -8,7 +8,7 @@ from json import load
 from random import choice
 
 
-ISOMETRIC_WIDTH = 64  # |
+ISOMETRIC_WIDTH = 64    # |
 ISOMETRIC_HEIGHT1 = 64  # | textures parameters
 ISOMETRIC_HEIGHT2 = 79  # |
 
@@ -44,15 +44,11 @@ class Block:
     def __str__(self):
         return f"Block {self.name}"
 
-    def draw(
-        self, x: float, y: float, angle: int, painter: QPainter, variant: str
-    ) -> None:
+    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: str) -> None:
         if variant not in self.variants:
             raise AttributeError(f"Block called {self.name} has not variant {variant}.")
 
-        painter.drawImage(
-            x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0]
-        )
+        painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
 
 
@@ -99,7 +95,8 @@ Grounds = GroundsManager()
 class BuildingType:
     """Store information about some building type."""
 
-    def __init__(self, blocks: Dict[List[List[List[str]]]] = None):
+    def __init__(self, blocks: Dict[str, List[List[List[str]]]] = None):
+        # --------------------------------------------------------------------------------------------------------------
         self.blocks = {}
         self.possible_variants = {}
 
@@ -160,6 +157,8 @@ class BuildingType:
                 blocks_y + ((None,),) * (height - len(blocks_y))
                 for blocks_y in self.possible_variants[variant]
             )
+        # --------------------------------------------------------------------------------------------------------------
+        self.default_variant, self.default_blocks = self.generateVariant()
 
     def generateVariant(self) -> Tuple[Any, Tuple[Tuple[Tuple[Optional[Any]]]]]:
         btype_variant = choice(list(self.blocks))
@@ -178,6 +177,18 @@ class BuildingType:
                 for x in range(len(self.blocks[btype_variant]))
             ),
         )
+
+    def drawDefault(self, fx: int, fy: int, painter: QPainter) -> None:
+        blocks = self.blocks[self.default_variant]
+        for block_x in range(len(blocks)):
+            for block_y in range(len(blocks[block_x])):
+                for z in range(len(blocks[block_x][block_y])):
+                    if blocks[block_x][block_y][z] is not None:
+                        blocks[block_x][block_y][z].draw(
+                            (block_x - block_y) * ISOMETRIC_WIDTH + fx,
+                            (block_x + block_y) * (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 + fy,
+                            0, painter, self.default_blocks[block_x][block_y][z]
+                        )
 
 
 BUILDING_TYPES_DATA = load(open("building_types.json"))
