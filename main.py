@@ -103,10 +103,6 @@ class Frame(QMainWindow):
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
 
-        if event_key in {Qt.Key_Return, Qt.Key_Enter}:
-            if self.mode == Modes.TownBuilder:
-                self.buildProjectedBuilding()
-
         if event_key == Qt.Key_B:
             self.mode = Modes.TownBuilder
             self.choosen_building = Town.ProjectedBuilding(
