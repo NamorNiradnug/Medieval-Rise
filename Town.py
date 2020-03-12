@@ -253,7 +253,7 @@ class Town:
 
     # TODO saving
 
-    def translate(self, delta: QPoint, screen_size: QSize) -> None:
+    def translate(self, delta: QPoint) -> None:
         new_x = self.cam_x - delta.x() * self.cam_z
         new_y = self.cam_y - delta.y() * self.cam_z
         self.cam_x -= delta.x() * self.cam_z
