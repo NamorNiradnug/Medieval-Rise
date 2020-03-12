@@ -2,20 +2,12 @@
 from enum import Enum
 from threading import Event, Thread
 from types import FunctionType
-from typing import Tuple
 
 from PyQt5.QtCore import QPoint, QSize, Qt
 from PyQt5.QtGui import QCloseEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPixmap, QWheelEvent, QCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
-
-
-def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
-    return (
-        rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
-        and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
-    )
 
 
 class Interval(Thread):
@@ -53,31 +45,31 @@ class Frame(QMainWindow):
         self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
-        self.check_thead = Interval(1 / 40, self.mousePositionEvent)
+        self.check_thread = Interval(1 / 40, self.mousePositionEvent)
         self.draw_thread.start()
-        self.check_thead.start()
+        self.check_thread.start()
 
         self.town = town
 
         self.last_pos = self.cursor().pos()
         self.last_button = Qt.NoButton
-        self.choosen_building = None
-        self.choosen_btype = 0
+        self.chosen_building = None
+        self.chosen_btype = 0
         self.mode = Modes.Town
 
     def buildProjectedBuilding(self):
         if self.town.isBlocksEmpty(
-                round(self.choosen_building.isometric.x()),
-                round(self.choosen_building.isometric.y()),
-                self.choosen_building.blocks):
-            self.choosen_building.build()
+                round(self.chosen_building.isometric.x()),
+                round(self.chosen_building.isometric.y()),
+                self.chosen_building.blocks):
+            self.chosen_building.build()
 
     def setSize(self, size: QSize) -> None:
         self.resize(size.width(), size.height())
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
-        self.check_thead.cancel()
+        self.check_thread.cancel()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.last_button = event.button()
@@ -105,34 +97,34 @@ class Frame(QMainWindow):
 
         if event_key == Qt.Key_B:
             self.mode = Modes.TownBuilder
-            self.choosen_building = Town.ProjectedBuilding(
-                self.town, Town.BuildingTypes.getByNumber(self.choosen_btype)
+            self.chosen_building = Town.ProjectedBuilding(
+                self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
             )
             self.cursor().setPos(self.width() / 2, self.height() / 2)
             self.setCursor(transparentCursor())
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (self.choosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.choosen_btype))
+                self.chosen_btype = (self.chosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
+                self.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.chosen_btype))
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:
-                self.choosen_btype = (self.choosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
-                self.choosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.choosen_btype))
+                self.chosen_btype = (self.chosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
+                self.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.chosen_btype))
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.turn(90)
+                self.chosen_building.turn(90)
 
         if event_key == Qt.Key_Left:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.turn(-90)
+                self.chosen_building.turn(-90)
 
         if event_key == Qt.Key_Escape:
             if self.mode == Modes.TownBuilder:
-                self.choosen_building.destroy()
-                self.choosen_building = None
+                self.chosen_building.destroy()
+                self.chosen_building = None
                 self.mode = Modes.Town
                 self.setCursor(QCursor())
 
@@ -148,9 +140,9 @@ class Frame(QMainWindow):
             cursor_pos = (
                 self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
                 QPoint(self.town.cam_x, self.town.cam_y)
-            self.choosen_building.isometric = Town.isometric(cursor_pos.x(), cursor_pos.y())
-            self.choosen_building.draw(painter, self.size())
-            Town.BuildingTypes.getByNumber(self.choosen_btype).drawDefault(self.width() - 125, 250, painter)
+            self.chosen_building.isometric = Town.isometric(cursor_pos.x(), cursor_pos.y())
+            self.chosen_building.draw(painter, self.size())
+            Town.BuildingTypes.getByNumber(self.chosen_btype).drawDefault(self.width() - 125, 250, painter)
 
         painter.end()
 
@@ -158,7 +150,7 @@ class Frame(QMainWindow):
         cursor_pos = self.cursor().pos()
 
         if self.last_button == Qt.NoButton \
-           and not isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
+           and not Town.isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
             delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
                            (cursor_pos.y() - self.size().height() // 2) / 34)
             self.town.translate(-delta)

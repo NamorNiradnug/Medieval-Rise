@@ -96,7 +96,7 @@ class BuildingType:
     """Store information about some building type."""
 
     def __init__(self, blocks: Dict[str, List[List[List[str]]]] = None):
-        # --------------------------------------------------------------------------------------------------------------
+        ##################################################################################
         self.blocks = {}
         self.possible_variants = {}
 
@@ -157,7 +157,7 @@ class BuildingType:
                 blocks_y + ((None,),) * (height - len(blocks_y))
                 for blocks_y in self.possible_variants[variant]
             )
-        # --------------------------------------------------------------------------------------------------------------
+        #######################################################################
         self.default_variant, self.default_blocks = self.generateVariant()
 
     def generateVariant(self) -> Tuple[Any, Tuple[Tuple[Tuple[Optional[Any]]]]]:

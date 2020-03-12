@@ -15,6 +15,13 @@ def isometric(x: float, y: float) -> QPointF:
                                                                               (x / ISOMETRIC_WIDTH)),) / 2)
 
 
+def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
+    return (
+            rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
+            and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+    )
+
+
 class Chunk:
     """Store data of blocks in 16 by 16 square"""
 
@@ -246,6 +253,8 @@ class Town:
 
     # TODO saving
 
-    def translate(self, delta: QPoint) -> None:
+    def translate(self, delta: QPoint, screen_size: QSize) -> None:
+        new_x = self.cam_x - delta.x() * self.cam_z
+        new_y = self.cam_y - delta.y() * self.cam_z
         self.cam_x -= delta.x() * self.cam_z
         self.cam_y -= delta.y() * self.cam_z
