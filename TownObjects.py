@@ -1,4 +1,3 @@
-from enum import Enum
 from json import load
 from random import choice
 from typing import Any, Dict, List, Optional, Tuple
