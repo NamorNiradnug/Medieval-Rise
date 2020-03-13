@@ -39,9 +39,8 @@ def transparentCursor() -> QCursor:
 
 
 class Frame(QMainWindow):
-    def __init__(self, town: Town.Town, size: QSize = QSize(640, 480)):
+    def __init__(self, town: Town.Town):
         super().__init__()
-        self.setSize(size)
         self.setMouseTracking(True)
 
         self.draw_thread = Interval(1 / 60, self.update)
@@ -58,14 +57,10 @@ class Frame(QMainWindow):
         self.mode = Modes.Town
 
     def buildProjectedBuilding(self):
-        if self.town.isBlocksEmpty(
-                round(self.chosen_building.isometric.x()),
-                round(self.chosen_building.isometric.y()),
-                self.chosen_building.blocks):
+        if (self.town.isBlocksEmpty(round(self.chosen_building.isometric.x()), round(self.chosen_building.isometric.y()),
+                                    self.chosen_building.blocks)
+                and self.town.isNearSimilarBuilding(self.chosen_building)):
             self.chosen_building.build()
-
-    def setSize(self, size: QSize) -> None:
-        self.resize(size.width(), size.height())
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()

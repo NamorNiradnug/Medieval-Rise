@@ -1,12 +1,11 @@
-from typing import Any, Tuple, List, Dict, Optional
-
-from resources_manager import getImage
+from enum import Enum
+from json import load
+from random import choice
+from typing import Any, Dict, List, Optional, Tuple
 
 from PyQt5.QtGui import QPainter
 
-from json import load
-from random import choice
-
+from resources_manager import getImage
 
 ISOMETRIC_WIDTH = 64    # |
 ISOMETRIC_HEIGHT1 = 64  # | textures parameters
@@ -28,8 +27,7 @@ class Block:
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
         self.variants = {
             i: {
-                j
-                * 90: (
+                j * 90: (
                     getImage(f"{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left"),
                     getImage(f"{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right"),
                 )
@@ -92,10 +90,18 @@ class GroundsManager:
 Grounds = GroundsManager()
 
 
+class BuildingGroups:
+    """Store data of groups of Buildings."""
+    default = 0
+    forts = 1
+    distances = {0: 5, 1: 2}
+
+
 class BuildingType:
     """Store information about some building type."""
 
-    def __init__(self, blocks: Dict[str, List[List[List[str]]]] = None):
+    def __init__(self, blocks: Dict[str, List[List[List[str]]]], group: str):
+        self.group = eval(f'BuildingGroups.{group}')
         ##################################################################################
         self.blocks = {}
         self.possible_variants = {}
@@ -175,7 +181,7 @@ class BuildingType:
                     for y in range(matrixHeight(self.blocks[btype_variant]))
                 )
                 for x in range(len(self.blocks[btype_variant]))
-            ),
+            )
         )
 
     def drawDefault(self, fx: int, fy: int, painter: QPainter) -> None:
@@ -200,7 +206,7 @@ class BuildingTypeManager:
        Use BuildingType.getByNumber(num) to get BuildingType with number 'num'."""
 
     building_types = {
-        item: BuildingType(BUILDING_TYPES_DATA[item]["blocks"])
+        item: BuildingType(BUILDING_TYPES_DATA[item]["blocks"], BUILDING_TYPES_DATA[item].get('group', 'default'))
         for item in BUILDING_TYPES_DATA
     }
 

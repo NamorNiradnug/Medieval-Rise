@@ -1,24 +1,24 @@
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
 
-from TownObjects import ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH, Grounds, BuildingTypes, BuildingType,\
-    Block
+from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
+                         Block, BuildingType, BuildingTypes, Grounds, BuildingGroups)
 
 
 def isometric(x: float, y: float) -> QPointF:
     """Convert rectangular coordinates to isometric."""
     # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
-    return (QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)), ((y / (ISOMETRIC_HEIGHT1 / 2)) -
-                                                                              (x / ISOMETRIC_WIDTH)),) / 2)
+    return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
+                   ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH))) / 2
 
 
 def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
     return (
-            rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
-            and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+        rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
+        and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
     )
 
 
@@ -108,6 +108,9 @@ class Building(TownObject):
                     if self.blocks[block_x][block_y][block_z] is not None:
                         town.addBlock(x + block_x, y + block_y, block_z, self)
 
+    def center(self) -> QPointF:
+        return QPointF(self.x + len(self.blocks), self.y + len(self.blocks[0])) / 2
+
     def destroy(self) -> None:
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
@@ -139,6 +142,12 @@ class ProjectedBuilding:
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
 
+    def group(self):
+        return self._building_type.group
+
+    def center(self) -> QPointF:
+        return QPointF(self.isometric.x() + len(self.blocks), self.isometric.y() + len(self.blocks[0])) / 2
+
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
         height = len(self.blocks[0])
         iso_x = round(self.isometric.x())
@@ -163,15 +172,8 @@ class ProjectedBuilding:
         return self._angle
 
     def build(self) -> None:
-        Building(
-            round(self.isometric.x()),
-            round(self.isometric.y()),
-            self._angle,
-            self.town,
-            self._building_type,
-            self.blocks_variants,
-            self._btype_variant,
-        )
+        Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
+                 self.town, self._building_type, self.blocks_variants, self._btype_variant)
         self.generateVariants()
 
     def destroy(self) -> None:
@@ -180,9 +182,7 @@ class ProjectedBuilding:
     def generateVariants(self):
         self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
         self.blocks_variants = turnMatrix(self.blocks_variants, self._angle)
-        self.blocks = turnMatrix(
-            self._building_type.blocks[self._btype_variant], self._angle
-        )
+        self.blocks = turnMatrix(self._building_type.blocks[self._btype_variant], self._angle)
 
     def setBuildingType(self, building_type: BuildingType) -> None:
         self._building_type = building_type
@@ -190,9 +190,7 @@ class ProjectedBuilding:
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
-            raise AttributeError(
-                f"Buildings can turn on 90 or -90 degrees, not {delta_angle}"
-            )
+            raise AttributeError(f"Buildings can turn on 90 or -90 degrees, not {delta_angle}")
 
         self._angle = (self._angle + delta_angle) % 360
         self.blocks = turnMatrix(self.blocks, delta_angle % 360)
@@ -211,8 +209,9 @@ class Town:
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
-        self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
-        self.chunks[x // 16][y // 16].is_empty = False
+        if 0 <= x <= 255 and 0 <= y <= 255:
+            self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
+            self.chunks[x // 16][y // 16].is_empty = False
 
     def draw(self, painter: QPainter, size: QSize) -> None:
         x = self.cam_x - (self.cam_z * size.width()) // 2
@@ -238,12 +237,29 @@ class Town:
         return True
 
     def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
-        return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
+        if 0 <= x <= 255 and 0 <= y <= 255:
+            return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
+        return True
+
+    def nearestBuildingWithGroup(self, point: QPointF, group: int) -> Any:
+        nearest = None
+        for building in self.buildings:
+            if building.building_type.group == group and \
+                    nearest is None or self.distance(building, point) < self.distance(nearest, point):
+                nearest = building
+        return nearest
+
+    def isNearSimilarBuilding(self, project: ProjectedBuilding) -> bool:
+        nearest = self.nearestBuildingWithGroup(project.center(), project.group())
+        if nearest is None:
+            return True
+        return self.distance(project, nearest) <= BuildingGroups.distances[project.group()]
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
-        self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
-        self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
-            tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)])
+        if 0 <= x <= 255 and 0 <= y <= 255:
+            self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
+            self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
+                tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)])
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = -event.angleDelta().y() / (self.scale * 480)
@@ -254,7 +270,18 @@ class Town:
     # TODO saving
 
     def translate(self, delta: QPoint) -> None:
-        new_x = self.cam_x - delta.x() * self.cam_z
-        new_y = self.cam_y - delta.y() * self.cam_z
         self.cam_x -= delta.x() * self.cam_z
         self.cam_y -= delta.y() * self.cam_z
+
+    @staticmethod
+    def distance(*args) -> float:
+        print(args)
+        point1, point2 = map(Town._translateToPoint, args)
+        return abs(point1.x() - point2.x()) + abs(point1.y() - point2.y())
+
+    @staticmethod
+    def _translateToPoint(obj: Any) -> QPointF:
+        if isinstance(obj, (QPoint, QPointF)):
+            return QPointF(obj.x(), obj.y())
+        if isinstance(obj, (Building, ProjectedBuilding)):
+            return obj.center()
