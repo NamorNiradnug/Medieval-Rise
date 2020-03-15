@@ -67,18 +67,21 @@ Blocks = BlocksManager()
 class Ground:
     """Store data of ground."""
 
-    def __init__(self, name: str):
-        self.image = getImage(name)
+    def __init__(self, variants: Dict[str, str]):
+        self.variants = {item: getImage(variants[item]) for item in variants}
 
-    def draw(self, x: float, y: float, painter: QPainter) -> None:
-        painter.drawImage(x - ISOMETRIC_WIDTH, y, self.image)
+    def draw(self, x: float, y: float,  variant: str, painter: QPainter) -> None:
+        painter.drawImage(x - ISOMETRIC_WIDTH, y, self.variants[variant])
+
+
+GROUNDS_DATA = load(open("grounds.json"))
 
 
 class GroundsManager:
     """Store all grounds.
         Use Grounds.ground_name to get Ground(ground_name)."""
 
-    grounds = {name: Ground(name) for name in ("grass",)}
+    grounds = {name: Ground(GROUNDS_DATA[name]) for name in GROUNDS_DATA}
 
     def __getattr__(self, item):
         if item in self.grounds:

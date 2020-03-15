@@ -12,6 +12,7 @@
         }
     },
     "house": {
+        "group": "forts",
         "blocks": {
             "middle_door": [
                 [

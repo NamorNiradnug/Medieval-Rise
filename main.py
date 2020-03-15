@@ -57,10 +57,8 @@ class Frame(QMainWindow):
         self.mode = Modes.Town
 
     def buildProjectedBuilding(self):
-        if (self.town.isBlocksEmpty(round(self.chosen_building.isometric.x()), round(self.chosen_building.isometric.y()),
-                                    self.chosen_building.blocks)
-                and self.town.isNearSimilarBuilding(self.chosen_building)):
-            self.chosen_building.build()
+        if self.chosen_building.build():
+            self.town.setBuildingMaskForGroup(self.chosen_building.group())
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
@@ -95,6 +93,7 @@ class Frame(QMainWindow):
             self.chosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
             )
+            self.town.setBuildingMaskForGroup(self.chosen_building.group())
             self.cursor().setPos(self.width() / 2, self.height() / 2)
             self.setCursor(transparentCursor())
 

@@ -32,13 +32,14 @@ class Chunk:
         self.is_empty = True
         self.blocks = tuple([tuple([[None] * 4 for _ in range(16)]) for _ in range(16)])
         self.grounds = tuple([[Grounds.grass for _ in range(16)] for _ in range(16)])
+        self.grounds_variants = tuple([["default" for _ in range(16)] for _ in range(16)])
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
         # Draw the ground.
         for i in range(16):
             for j in range(16):
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        (ISOMETRIC_HEIGHT1 / 2) - y, painter)
+                                        (ISOMETRIC_HEIGHT1 / 2) - y, self.grounds_variants[i][j], painter)
 
         if self.is_empty:
             return
@@ -171,10 +172,14 @@ class ProjectedBuilding:
     def getAngle(self) -> int:
         return self._angle
 
-    def build(self) -> None:
-        Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
-                 self.town, self._building_type, self.blocks_variants, self._btype_variant)
-        self.generateVariants()
+    def build(self) -> bool:
+        if (self.town.isBlocksEmpty(round(self.isometric.x()), round(self.isometric.y()), self.blocks)
+                and self.town.isNearBuildingWithGroup(self.center(), self.group())):
+            Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
+                     self.town, self._building_type, self.blocks_variants, self._btype_variant)
+            self.generateVariants()
+            return True
+        return False
 
     def destroy(self) -> None:
         del self
@@ -241,6 +246,14 @@ class Town:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
         return True
 
+    def setBuildingMaskForGroup(self, group: int) -> None:
+        for x in range(256):
+            for y in range(256):
+                if self.isNearBuildingWithGroup(QPointF(x + .5, y + .5), group):
+                    self.chunks[x // 16][y // 16].grounds_variants[x % 16][y % 16] = "green"
+                else:
+                    self.chunks[x // 16][y // 16].grounds_variants[x % 16][y % 16] = "default"
+
     def nearestBuildingWithGroup(self, point: QPointF, group: int) -> Any:
         nearest = None
         for building in self.buildings:
@@ -249,11 +262,11 @@ class Town:
                 nearest = building
         return nearest
 
-    def isNearSimilarBuilding(self, project: ProjectedBuilding) -> bool:
-        nearest = self.nearestBuildingWithGroup(project.center(), project.group())
+    def isNearBuildingWithGroup(self, point: QPointF, group: int) -> bool:
+        nearest = self.nearestBuildingWithGroup(point, group)
         if nearest is None:
             return True
-        return self.distance(project, nearest) <= BuildingGroups.distances[project.group()]
+        return self.distance(point, nearest) <= BuildingGroups.distances[group]
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
         if 0 <= x <= 255 and 0 <= y <= 255:
@@ -275,7 +288,6 @@ class Town:
 
     @staticmethod
     def distance(*args) -> float:
-        print(args)
         point1, point2 = map(Town._translateToPoint, args)
         return abs(point1.x() - point2.x()) + abs(point1.y() - point2.y())
 

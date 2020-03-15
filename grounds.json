@@ -1,0 +1,6 @@
+{
+    "grass": {
+        "default": "grass",
+        "green": "grass_green"
+    }
+}
