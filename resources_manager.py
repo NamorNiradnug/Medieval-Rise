@@ -1,3 +1,5 @@
+import json
+
 from PyQt5.Qt import QImage
 
 
@@ -13,3 +15,8 @@ def getImage(name: str) -> QImage:
             raise ValueError(f"Resource {name}.png doesn't exist")
         imageResources[name] = resource
         return resource
+
+
+def getJSON(name: str) -> dict:
+    with open(f'data/{name}.json') as f:
+        return json.load(f)

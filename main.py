@@ -43,11 +43,6 @@ class Frame(QMainWindow):
         super().__init__()
         self.setMouseTracking(True)
 
-        self.draw_thread = Interval(1 / 60, self.update)
-        self.check_thread = Interval(1 / 40, self.mousePositionEvent)
-        self.draw_thread.start()
-        self.check_thread.start()
-
         self.town = town
 
         self.last_pos = self.cursor().pos()
@@ -56,9 +51,13 @@ class Frame(QMainWindow):
         self.chosen_btype = 0
         self.mode = Modes.Town
 
+        self.draw_thread = Interval(1 / 60, self.update)
+        self.check_thread = Interval(1 / 40, self.mousePositionEvent)
+        self.draw_thread.start()
+        self.check_thread.start()
+
     def buildProjectedBuilding(self):
-        if self.chosen_building.build():
-            self.town.setBuildingMaskForGroup(self.chosen_building.group())
+        self.chosen_building.build()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
@@ -93,7 +92,6 @@ class Frame(QMainWindow):
             self.chosen_building = Town.ProjectedBuilding(
                 self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
             )
-            self.town.setBuildingMaskForGroup(self.chosen_building.group())
             self.cursor().setPos(self.width() / 2, self.height() / 2)
             self.setCursor(transparentCursor())
 

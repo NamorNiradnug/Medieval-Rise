@@ -4,13 +4,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from PyQt5.QtGui import QPainter
 
-from resources_manager import getImage
+from resources_manager import getImage, getJSON
 
 ISOMETRIC_WIDTH = 64    # |
 ISOMETRIC_HEIGHT1 = 64  # | textures parameters
 ISOMETRIC_HEIGHT2 = 79  # |
 
-BLOCKS_DATA = load(open("blocks.json"))
+BLOCKS_DATA = getJSON("blocks")
+GROUNDS_DATA = getJSON("grounds")
+BUILDING_TYPES_DATA = getJSON("building_types")
 
 
 def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
@@ -72,9 +74,6 @@ class Ground:
 
     def draw(self, x: float, y: float,  variant: str, painter: QPainter) -> None:
         painter.drawImage(x - ISOMETRIC_WIDTH, y, self.variants[variant])
-
-
-GROUNDS_DATA = load(open("grounds.json"))
 
 
 class GroundsManager:
@@ -197,9 +196,6 @@ class BuildingType:
                             (block_x + block_y) * (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 + fy,
                             0, painter, self.default_blocks[block_x][block_y][z]
                         )
-
-
-BUILDING_TYPES_DATA = load(open("building_types.json"))
 
 
 class BuildingTypeManager:

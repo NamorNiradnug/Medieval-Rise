@@ -32,14 +32,19 @@ class Chunk:
         self.is_empty = True
         self.blocks = tuple([tuple([[None] * 4 for _ in range(16)]) for _ in range(16)])
         self.grounds = tuple([[Grounds.grass for _ in range(16)] for _ in range(16)])
-        self.grounds_variants = tuple([["default" for _ in range(16)] for _ in range(16)])
+        self.with_mask = set()
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
         # Draw the ground.
         for i in range(16):
             for j in range(16):
+                if (i, j) in self.with_mask:
+                    ground_variant = "green"
+                else:
+                    ground_variant = "default"
+
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        (ISOMETRIC_HEIGHT1 / 2) - y, self.grounds_variants[i][j], painter)
+                                        (ISOMETRIC_HEIGHT1 / 2) - y, ground_variant, painter)
 
         if self.is_empty:
             return
@@ -93,8 +98,7 @@ class TownObject:
 
 
 class Building(TownObject):
-    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType,
-                 blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
+    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
         self.btype_variant = btype_variant
@@ -142,12 +146,13 @@ class ProjectedBuilding:
         self.generateVariants()
         self.town = town
         self.isometric = isometric(town.cam_x, town.cam_y)
+        self.town.setBuildingMaskForGroup(self.group())
 
     def group(self):
         return self._building_type.group
 
     def center(self) -> QPointF:
-        return QPointF(self.isometric.x() + len(self.blocks), self.isometric.y() + len(self.blocks[0])) / 2
+        QPoint((self.isometric.x() + len(self.blocks)) // 2, (self.isometric.y() + len(self.blocks[0])) // 2)
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
         height = len(self.blocks[0])
@@ -172,14 +177,13 @@ class ProjectedBuilding:
     def getAngle(self) -> int:
         return self._angle
 
-    def build(self) -> bool:
+    def build(self) -> None:
         if (self.town.isBlocksEmpty(round(self.isometric.x()), round(self.isometric.y()), self.blocks)
                 and self.town.isNearBuildingWithGroup(self.center(), self.group())):
             Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
                      self.town, self._building_type, self.blocks_variants, self._btype_variant)
             self.generateVariants()
-            return True
-        return False
+            self.town.setBuildingMaskForGroup(self.group())
 
     def destroy(self) -> None:
         del self
@@ -192,6 +196,7 @@ class ProjectedBuilding:
     def setBuildingType(self, building_type: BuildingType) -> None:
         self._building_type = building_type
         self.generateVariants()
+        self.town.setBuildingMaskForGroup(self.group())
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
@@ -247,32 +252,53 @@ class Town:
         return True
 
     def setBuildingMaskForGroup(self, group: int) -> None:
-        for x in range(256):
-            for y in range(256):
-                if self.isNearBuildingWithGroup(QPointF(x + .5, y + .5), group):
-                    self.chunks[x // 16][y // 16].grounds_variants[x % 16][y % 16] = "green"
-                else:
-                    self.chunks[x // 16][y // 16].grounds_variants[x % 16][y % 16] = "default"
-
-    def nearestBuildingWithGroup(self, point: QPointF, group: int) -> Any:
-        nearest = None
+        for chunks in self.chunks:
+            for chunk in chunks:
+                chunk.with_mask = set()
+        is_group_exist = False
+        radius = BuildingGroups.distances[group]
         for building in self.buildings:
-            if building.building_type.group == group and \
-                    nearest is None or self.distance(building, point) < self.distance(nearest, point):
-                nearest = building
-        return nearest
+            if building.building_type.group == group:
+                is_group_exist = True
+                for i in range(building.x, building.x + len(building.blocks)):
+                    for j in range(building.y, building.y + len(building.blocks[0])):
+                        if self.getBlock(i, j, 0) is not None:
+                            for xx in range(radius + 1):
+                                for yy in range(radius - xx):
+                                    for x, y in {(xx + i, yy + j), (xx + i, -yy + j), (-xx + i, yy + j), (-xx + i, -yy + j)}:
+                                        self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
+        if not is_group_exist:
+            for chunks in self.chunks:
+                for chunk in chunks:
+                    chunk.with_mask = {(i, j) for j in range(16) for i in range(16)}
 
-    def isNearBuildingWithGroup(self, point: QPointF, group: int) -> bool:
-        nearest = self.nearestBuildingWithGroup(point, group)
-        if nearest is None:
+    def isNearBuildingWithGroup(self, group: int, point: Tuple[int]) -> bool:
+        is_group_exist = False
+        for building in self.buildings:
+            if building.building_type.group == group:
+                is_group_exist = True
+        if not is_group_exist:
             return True
-        return self.distance(point, nearest) <= BuildingGroups.distances[group]
+        # FIXME it is not check it correctly
+        radius = BuildingGroups.distances[group]
+        for xx in range(radius + 1):
+            for yy in range(radius - xx):
+                for x, y in {(xx + point[0], yy + point[1]), (xx + point[0], -yy + point[1]),
+                             (-xx + point[0], yy + point[1]), (-xx + point[0], -yy + point[1])}:
+                    if self.getBlock(x, y, 0).building_type.group == group:
+                        return True
+        return False
+
+    def getBlock(self, x: int, y: int, z: int) -> Any:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
+            return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
+        return None
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
-        if 0 <= x <= 255 and 0 <= y <= 255:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
             self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
-                tuple([tuple([[None] * 4 for j in range(16)]) for i in range(16)])
+                tuple(tuple([None] * 4 for j in range(16)) for i in range(16))
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         delta = -event.angleDelta().y() / (self.scale * 480)
