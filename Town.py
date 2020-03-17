@@ -145,8 +145,9 @@ class ProjectedBuilding:
         self.blocks_variants = None
         self.generateVariants()
         self.town = town
-        self.x = round(self.town.cam_x)
-        self.y = round(self.town.cam_y)
+        coords = isometric(town.cam_x, town.cam_y)
+        self.x = round(coords.x())
+        self.y = round(coords.y())
         self.town.setBuildingMaskForGroup(self.group())
 
     def _addNewBlocks(self):
@@ -193,6 +194,7 @@ class ProjectedBuilding:
                 self.town.setBuildingMaskForGroup(self.group())
 
     def destroy(self) -> None:
+        self._delOldBlocks()
         del self
 
     def _delOldBlocks(self):

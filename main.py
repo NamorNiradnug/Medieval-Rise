@@ -85,12 +85,13 @@ class Frame(QMainWindow):
         event_key = event.key()
 
         if event_key == Qt.Key_B:
-            self.mode = Modes.TownBuilder
-            self.chosen_building = Town.ProjectedBuilding(
-                self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
-            )
-            self.cursor().setPos(self.width() / 2, self.height() / 2)
-            self.setCursor(transparentCursor())
+            if self.mode == Modes.Town:
+                self.mode = Modes.TownBuilder
+                self.chosen_building = Town.ProjectedBuilding(
+                    self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
+                )
+                self.cursor().setPos(self.width() / 2, self.height() / 2)
+                self.setCursor(transparentCursor())
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
