@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Set, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
@@ -113,9 +113,6 @@ class Building(TownObject):
                     if self.blocks[block_x][block_y][block_z] is not None:
                         town.addBlock(x + block_x, y + block_y, block_z, self)
 
-    def center(self) -> QPointF:
-        return QPointF(self.x + len(self.blocks), self.y + len(self.blocks[0])) / 2
-
     def destroy(self) -> None:
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
@@ -151,8 +148,8 @@ class ProjectedBuilding:
     def group(self):
         return self._building_type.group
 
-    def center(self) -> QPointF:
-        QPoint((self.isometric.x() + len(self.blocks)) // 2, (self.isometric.y() + len(self.blocks[0])) // 2)
+    def center(self) -> Tuple[int, int]:
+        return int(self.isometric.x() + len(self.blocks) // 2), int(self.isometric.y() + len(self.blocks[0]) // 2)
 
     def draw(self, painter: QPainter, screen_size: QSize) -> None:
         height = len(self.blocks[0])
@@ -179,7 +176,7 @@ class ProjectedBuilding:
 
     def build(self) -> None:
         if (self.town.isBlocksEmpty(round(self.isometric.x()), round(self.isometric.y()), self.blocks)
-                and self.town.isNearBuildingWithGroup(self.center(), self.group())):
+                and self.town.isNearBuildingWithGroup(self.group(), self.center())):
             Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
                      self.town, self._building_type, self.blocks_variants, self._btype_variant)
             self.generateVariants()
@@ -255,41 +252,40 @@ class Town:
         for chunks in self.chunks:
             for chunk in chunks:
                 chunk.with_mask = set()
+        
         is_group_exist = False
+        
         radius = BuildingGroups.distances[group]
         for building in self.buildings:
             if building.building_type.group == group:
                 is_group_exist = True
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
-                        if self.getBlock(i, j, 0) is not None:
-                            for xx in range(radius + 1):
-                                for yy in range(radius - xx):
-                                    for x, y in {(xx + i, yy + j), (xx + i, -yy + j), (-xx + i, yy + j), (-xx + i, -yy + j)}:
-                                        self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
+                        if self.getBlock(i, j) is not None:
+                            for x, y in self.manhattenCircle((i, j), radius):
+                                self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
+        
         if not is_group_exist:
             for chunks in self.chunks:
                 for chunk in chunks:
                     chunk.with_mask = {(i, j) for j in range(16) for i in range(16)}
 
-    def isNearBuildingWithGroup(self, group: int, point: Tuple[int]) -> bool:
+    def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
         is_group_exist = False
         for building in self.buildings:
             if building.building_type.group == group:
                 is_group_exist = True
         if not is_group_exist:
             return True
-        # FIXME it is not check it correctly
+
         radius = BuildingGroups.distances[group]
-        for xx in range(radius + 1):
-            for yy in range(radius - xx):
-                for x, y in {(xx + point[0], yy + point[1]), (xx + point[0], -yy + point[1]),
-                             (-xx + point[0], yy + point[1]), (-xx + point[0], -yy + point[1])}:
-                    if self.getBlock(x, y, 0).building_type.group == group:
-                        return True
+        for x, y in self.manhattenCircle(point, radius):
+            print(x, y, self.getBlock(x, y))
+            if self.getBlock(x, y) is not None and self.getBlock(x, y).building_type.group == group:
+                return True
         return False
 
-    def getBlock(self, x: int, y: int, z: int) -> Any:
+    def getBlock(self, x: int, y: int, z: int = 0) -> Any:
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
         return None
@@ -313,13 +309,12 @@ class Town:
         self.cam_y -= delta.y() * self.cam_z
 
     @staticmethod
-    def distance(*args) -> float:
-        point1, point2 = map(Town._translateToPoint, args)
-        return abs(point1.x() - point2.x()) + abs(point1.y() - point2.y())
-
-    @staticmethod
-    def _translateToPoint(obj: Any) -> QPointF:
-        if isinstance(obj, (QPoint, QPointF)):
-            return QPointF(obj.x(), obj.y())
-        if isinstance(obj, (Building, ProjectedBuilding)):
-            return obj.center()
+    def manhattenCircle(center: Tuple[int, int], radius: int) -> Set[Tuple[int, int]]:
+        answer = set()
+        for x_abs in range(radius + 1):
+            for y_abs in range(radius - x_abs + 1):
+                answer.update({
+                                (x_abs + center[0], y_abs + center[1]), (x_abs + center[0], -y_abs + center[1]),
+                                (-x_abs + center[0], y_abs + center[1]), (-x_abs + center[0], -y_abs + center[1])
+                               })
+        return answer
