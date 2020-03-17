@@ -56,9 +56,6 @@ class Frame(QMainWindow):
         self.draw_thread.start()
         self.check_thread.start()
 
-    def buildProjectedBuilding(self):
-        self.chosen_building.build()
-
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
         self.check_thread.cancel()
@@ -80,7 +77,7 @@ class Frame(QMainWindow):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
             if self.mode == Modes.TownBuilder:
-                self.buildProjectedBuilding()
+                self.chosen_building.build()
 
         self.last_button = Qt.NoButton
 
@@ -126,14 +123,16 @@ class Frame(QMainWindow):
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
-        self.town.draw(painter, self.size())
 
         if self.mode == Modes.TownBuilder:
             cursor_pos = (
                 self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
                 QPoint(self.town.cam_x, self.town.cam_y)
-            self.chosen_building.isometric = Town.isometric(cursor_pos.x(), cursor_pos.y())
-            self.chosen_building.draw(painter, self.size())
+            self.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()), self.size())
+
+        self.town.draw(painter, self.size())
+
+        if self.mode == Modes.TownBuilder:
             Town.BuildingTypes.getByNumber(self.chosen_btype).drawDefault(self.width() - 125, 250, painter)
 
         painter.end()

@@ -55,9 +55,12 @@ class Chunk:
                 for z in range(3):
                     building = self.blocks[i][j][z]
                     if building is not None:
+                        if type(building) == ProjectedBuilding:
+                            painter.setOpacity(.9)
                         block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
                         block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                    (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
+                        painter.setOpacity(1)
 
 
 class TownObjectType:
@@ -121,7 +124,7 @@ class Building(TownObject):
         self.town.buildings.remove(self)
         del self
 
-    def getBlock(self, x: int, y: int, z: int) -> (Block, int, str):
+    def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
         return (
             self.blocks[x - self.x][y - self.y][z],
             self.angle,
@@ -134,7 +137,7 @@ class ProjectedBuilding:
 
     # TODO more comfortable choosing of type.
 
-    def __init__(self, town, building_type: BuildingType = BuildingTypes.getByNumber(0)):
+    def __init__(self, town: 'Town', building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
         self._angle = 0
         self.blocks = None
@@ -142,48 +145,62 @@ class ProjectedBuilding:
         self.blocks_variants = None
         self.generateVariants()
         self.town = town
-        self.isometric = isometric(town.cam_x, town.cam_y)
+        self.x = round(self.town.cam_x)
+        self.y = round(self.town.cam_y)
         self.town.setBuildingMaskForGroup(self.group())
+
+    def _addNewBlocks(self):
+        for x in range(len(self.blocks)):
+            for y in range(len(self.blocks[0])):
+                for z in range(len(self.blocks[x][y])):
+                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
+                        self.town.addBlock(x + self.x, y + self.y, z, self)
+
+    def addToMap(self, iso: QPointF, screen: QSize) -> None:
+        for x in range(len(self.blocks)):
+            for y in range(len(self.blocks[0])):
+                for z in range(len(self.blocks[x][y])):
+                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
+                        self.town.removeBlock(x + self.x, y + self.y, z)
+                    if self.town.isBlockEmpty(x + round(iso.x()), y + round(iso.y()), z):
+                        self.town.addBlock(x + round(iso.x()), y + round(iso.y()), z, self)
+        
+        self.x = round(iso.x())
+        self.y = round(iso.y())
 
     def group(self):
         return self._building_type.group
 
     def center(self) -> Tuple[int, int]:
-        return int(self.isometric.x() + len(self.blocks) // 2), int(self.isometric.y() + len(self.blocks[0]) // 2)
+        return self.x + len(self.blocks) // 2, self.y + len(self.blocks[0]) // 2
 
-    def draw(self, painter: QPainter, screen_size: QSize) -> None:
-        height = len(self.blocks[0])
-        iso_x = round(self.isometric.x())
-        iso_y = round(self.isometric.y())
-        painter.save()
-        painter.scale(self.town.scale, self.town.scale)
-        painter.setOpacity(0.9)
+    # TODO door check
 
-        for block_y in range(height):
-            for block_x in range(len(self.blocks)):
-                for block_z in range(len(self.blocks[block_x][block_y])):
-                    block = self.blocks[block_x][block_y][block_z]
-                    if block is not None:
-                        block.draw((iso_x + block_x - block_y - iso_y) * ISOMETRIC_WIDTH - self.town.cam_x +
-                                   self.town.cam_z * screen_size.width() / 2, (iso_x + iso_y + block_x + block_y) *
-                                   (ISOMETRIC_HEIGHT1 / 2) - self.town.cam_y - block_z * ISOMETRIC_HEIGHT2 +
-                                   screen_size.height() * self.town.cam_z / 2, self._angle, painter,
-                                   self.blocks_variants[block_x][block_y][block_z])
-        painter.restore()
-
-    def getAngle(self) -> int:
-        return self._angle
+    def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
+        return (
+            self.blocks[x - self.x][y - self.y][z],
+            self._angle,
+            self.blocks_variants[x - self.x][y - self.y][z],
+        )
 
     def build(self) -> None:
-        if (self.town.isBlocksEmpty(round(self.isometric.x()), round(self.isometric.y()), self.blocks)
-                and self.town.isNearBuildingWithGroup(self.group(), self.center())):
-            Building(round(self.isometric.x()), round(self.isometric.y()), self._angle,
-                     self.town, self._building_type, self.blocks_variants, self._btype_variant)
-            self.generateVariants()
-            self.town.setBuildingMaskForGroup(self.group())
+        if self.town.isBlocksEmpty(self.x, self.y, self.blocks):
+            if self.town.isNearBuildingWithGroup(self.group(), self.center()):
+                self._delOldBlocks()
+                Building(self.x, self.y, self._angle, self.town, self._building_type,
+                         self.blocks_variants, self._btype_variant)
+                self.generateVariants()
+                self.town.setBuildingMaskForGroup(self.group())
 
     def destroy(self) -> None:
         del self
+
+    def _delOldBlocks(self):
+        for x in range(len(self.blocks)):
+            for y in range(len(self.blocks[0])):
+                for z in range(len(self.blocks[x][y])):
+                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
+                        self.town.removeBlock(x + self.x, y + self.y, z)
 
     def generateVariants(self):
         self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
@@ -191,18 +208,21 @@ class ProjectedBuilding:
         self.blocks = turnMatrix(self._building_type.blocks[self._btype_variant], self._angle)
 
     def setBuildingType(self, building_type: BuildingType) -> None:
+        self._delOldBlocks()
         self._building_type = building_type
         self.generateVariants()
         self.town.setBuildingMaskForGroup(self.group())
+        self._addNewBlocks()
 
     def turn(self, delta_angle: int) -> None:
         if delta_angle not in {90, -90}:
             raise AttributeError(f"Buildings can turn on 90 or -90 degrees, not {delta_angle}")
 
+        self._delOldBlocks()
         self._angle = (self._angle + delta_angle) % 360
         self.blocks = turnMatrix(self.blocks, delta_angle % 360)
         self.blocks_variants = turnMatrix(self.blocks_variants, delta_angle % 360)
-
+        self._addNewBlocks()
 
 class Town:
     def __init__(self):
@@ -245,8 +265,38 @@ class Town:
 
     def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
         if 0 <= x <= 255 and 0 <= y <= 255:
-            return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] is None
+            return isinstance(self.getBlock(x, y, z), (type(None), ProjectedBuilding))
         return True
+
+    def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
+        is_group_exist = False
+        for building in self.buildings:
+            if building.building_type.group == group:
+                is_group_exist = True
+        if not is_group_exist:
+            return True
+
+        radius = BuildingGroups.distances[group]
+        for x, y in self.manhattenCircle(point, radius):
+            if not self.isBlockEmpty(x, y, 0) and self.getBlock(x, y).building_type.group == group:
+                return True
+        return False
+
+    def getBlock(self, x: int, y: int, z: int = 0) -> Any:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
+            return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
+
+    def removeBlock(self, x: int, y: int, z: int) -> None:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
+            self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
+            self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
+                tuple(tuple([None] * 4 for j in range(16)) for i in range(16))
+
+    def scaleByEvent(self, event: QWheelEvent) -> None:
+        delta = -event.angleDelta().y() / (self.scale * 480)
+        if 0.5 <= self.cam_z + delta <= 3:
+            self.cam_z += delta
+            self.scale = 1 / self.cam_z
 
     def setBuildingMaskForGroup(self, group: int) -> None:
         for chunks in self.chunks:
@@ -269,38 +319,6 @@ class Town:
             for chunks in self.chunks:
                 for chunk in chunks:
                     chunk.with_mask = {(i, j) for j in range(16) for i in range(16)}
-
-    def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
-        is_group_exist = False
-        for building in self.buildings:
-            if building.building_type.group == group:
-                is_group_exist = True
-        if not is_group_exist:
-            return True
-
-        radius = BuildingGroups.distances[group]
-        for x, y in self.manhattenCircle(point, radius):
-            print(x, y, self.getBlock(x, y))
-            if self.getBlock(x, y) is not None and self.getBlock(x, y).building_type.group == group:
-                return True
-        return False
-
-    def getBlock(self, x: int, y: int, z: int = 0) -> Any:
-        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
-            return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
-        return None
-
-    def removeBlock(self, x: int, y: int, z: int) -> None:
-        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
-            self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
-            self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
-                tuple(tuple([None] * 4 for j in range(16)) for i in range(16))
-
-    def scaleByEvent(self, event: QWheelEvent) -> None:
-        delta = -event.angleDelta().y() / (self.scale * 480)
-        if 0.5 <= self.cam_z + delta <= 3:
-            self.cam_z += delta
-            self.scale = 1 / self.cam_z
 
     # TODO saving
 
