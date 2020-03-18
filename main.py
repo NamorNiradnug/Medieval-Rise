@@ -59,12 +59,15 @@ class Frame(QMainWindow):
 
         self.draw_thread = Interval(1 / 60, self.update)
         self.check_thread = Interval(1 / 40, self.mousePositionEvent)
+        self.town_tic_thread = Interval(1 / 20, lambda: town.tic(self.size()))
+        self.town_tic_thread.start()
         self.draw_thread.start()
         self.check_thread.start()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
         self.check_thread.cancel()
+        self.town_tic_thread.cancel()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.last_button = event.button()
@@ -98,9 +101,6 @@ class Frame(QMainWindow):
                 )
                 self.cursor().setPos(self.width() / 2, self.height() / 2)
                 self.setCursor(transparentCursor())
-
-        if event_key == Qt.Key_C:
-            Town.Citizen(self.town)
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:

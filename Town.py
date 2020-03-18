@@ -1,5 +1,5 @@
-from bisect import insort
-from random import random
+from bisect import insort, bisect
+from random import randint
 from typing import Any, Set, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
@@ -118,6 +118,7 @@ class Building(TownObject):
 
         self.blocks = turnMatrix(self.building_type.blocks[btype_variant], angle)
         self.blocks_variants = blocks_variants
+        self.citizen = Citizen(self)
 
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):
@@ -271,14 +272,12 @@ class Town:
         self.scale = 1.0
 
         self.buildings = []
-        self.citizens = []
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
     def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
         if 0 <= x <= 255 and 0 <= y <= 255:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
-            self.chunks[x // 16][y // 16].is_empty = False
 
     def draw(self, painter: QPainter, size: QSize) -> None:
         """Draw town on screen with changed size."""
@@ -290,10 +289,7 @@ class Town:
         painter.scale(self.scale, self.scale)
         for chunks in self.chunks:
             for chunk in chunks:
-                if (-16 * ISOMETRIC_WIDTH < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <
-                    size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
-                    -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
-                        size.height() * self.cam_z):
+                if self._isChunkVisible(chunk, size):
                     chunk.draw(painter, x, y)
 
         painter.restore()
@@ -312,6 +308,14 @@ class Town:
         if 0 <= x <= 255 and 0 <= y <= 255:
             return isinstance(self.getBuilding(x, y, z), (type(None), ProjectedBuilding))
         return True
+
+    def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
+        x = self.cam_x - (self.cam_z * size.width()) // 2
+        y = self.cam_y - (self.cam_z * size.height()) // 2
+        return (-16 * ISOMETRIC_WIDTH < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <
+                    size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
+                -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
+                    size.height() * self.cam_z)
 
     def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
         """Check for buildings in radius equel group max distance."""
@@ -340,8 +344,6 @@ class Town:
 
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
-            self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
-                tuple(tuple([None] * 5 for j in range(16)) for i in range(16))
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         """Change zoom."""
@@ -377,6 +379,15 @@ class Town:
 
     # TODO saving
 
+    def tic(self, screen: QSize) -> None:        
+        for chunks in self.chunks:
+            for chunk in chunks:
+                if self._isChunkVisible(chunk, screen):
+                    for x in range(16):
+                        for y in range(16):
+                            for citizen in chunk.citizens[x][y]:
+                                citizen.step()
+
     def translate(self, delta: QPoint) -> None:
         """Translate camera."""
 
@@ -398,19 +409,30 @@ class Town:
 
 
 class Citizen:
-    def __init__(self, town: Town):
-        self.town = town
-        town.citizens.append(self)
-        self.x = random() * 255
-        self.y = random() * 255
+    """Citizen of building. He walks."""
+
+    def __init__(self, building: Building):
+        self.building = building
+        self.x = building.x + len(building.blocks) + .5
+        self.y = building.y + len(building.blocks[0]) + .5
         self._addToMap()
 
-    def _addToMap(self):
-        insort(self.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)], self)
+    def _addToMap(self) -> None:
+        insort(self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)], self)
+
+    def _delFromOldPosition(self) -> None:
+        pos = self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)]
+        pos.pop(bisect(pos, self) - 1)
 
     def __gt__(self, other) -> bool:
         return (self.y, self.x) > (other.y, other.x)
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
         painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - 22 - x,
-                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - 40 - y, getImage("human"))
+                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - 53 - y, getImage("human"))
+
+    def step(self):
+        self._delFromOldPosition()
+        self.x += randint(0, 1) * .2
+        self.y += randint(0, 1) * .2
+        self._addToMap()
