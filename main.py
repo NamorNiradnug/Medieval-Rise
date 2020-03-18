@@ -99,6 +99,9 @@ class Frame(QMainWindow):
                 self.cursor().setPos(self.width() / 2, self.height() / 2)
                 self.setCursor(transparentCursor())
 
+        if event_key == Qt.Key_C:
+            Town.Citizen(self.town)
+
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
                 self.chosen_btype = (self.chosen_btype + 1) % len(Town.BuildingTypes.sorted_names)

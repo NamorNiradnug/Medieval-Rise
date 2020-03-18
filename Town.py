@@ -1,17 +1,18 @@
+from random import random
 from typing import Any, Set, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
 
 from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
-                         Block, BuildingType, BuildingTypes, Grounds, BuildingGroups)
+                         Block, BuildingType, BuildingTypes, Grounds, BuildingGroups, getImage)
 
 
 def isometric(x: float, y: float) -> QPointF:
     """Convert rectangular coordinates to isometric."""
 
-    # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
-    # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
+    # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = y
+    # (iso_x - iso_y) * ISOMETRIC_WIDTH = x
     return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
                    ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH))) / 2
 
@@ -268,6 +269,7 @@ class Town:
         self.scale = 1.0
 
         self.buildings = []
+        self.citizens = []
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
@@ -291,6 +293,10 @@ class Town:
                     -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
                         size.height() * self.cam_z):
                     chunk.draw(painter, x, y)
+        
+        for citizen in self.citizens:
+            citizen.draw(painter)
+
         painter.restore()
 
     def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]]) -> bool:
@@ -390,3 +396,15 @@ class Town:
                                 (-x_abs + center[0], y_abs + center[1]), (-x_abs + center[0], -y_abs + center[1])
                                })
         return answer
+
+
+class Citizen:
+    def __init__(self, town: Town):
+        self.town = town
+        town.citizens.append(self)
+        self.x = random() * 255
+        self.y = random() * 255
+
+    def draw(self, painter: QPainter) -> None:
+        painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - self.town.cam_x,
+                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - self.town.cam_y, getImage("human"))
