@@ -59,5 +59,58 @@
                 ]
             ]
         }
+    },
+    "large": {
+        "group": "reach",
+        "blocks": {
+            "first": [
+                [
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house_door:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "house:wood_window",
+                        "house:wood_window",
+                        "roof"
+                    ]
+                ],
+                [
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ],
+                    [
+                        "house:stone",
+                        "house:wood_window",
+                        "roof"
+                    ]
+                ]
+            ]
+        }
     }
 }

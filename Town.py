@@ -60,7 +60,7 @@ class Chunk:
                 for citizen in self.citizens[i][j]:
                     citizen.draw(painter, x, y)
 
-                for z in range(4):
+                for z in range(5):
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
