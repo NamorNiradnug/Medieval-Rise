@@ -1,3 +1,4 @@
+from bisect import insort
 from random import random
 from typing import Any, Set, Tuple
 
@@ -34,9 +35,10 @@ class Chunk:
         self.y = y * 16
         # Generate a 16x16x3 matrix.
         self.is_empty = True
-        self.blocks = tuple([tuple([[None] * 4 for _ in range(16)]) for _ in range(16)])
-        self.grounds = tuple([[Grounds.grass for _ in range(16)] for _ in range(16)])
+        self.blocks = tuple(tuple([None] * 5 for _ in range(16)) for _ in range(16))
+        self.grounds = tuple([Grounds.grass for _ in range(16)] for _ in range(16))
         self.with_mask = set()
+        self.citizens = tuple(tuple([] for _ in range(16)) for _ in range(16))
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
         """Draw chunk."""
@@ -44,21 +46,21 @@ class Chunk:
         # Draw the ground.
         for i in range(16):
             for j in range(16):
+
+                ground_variant = "default"
                 if (i, j) in self.with_mask:
                     ground_variant = "green"
-                else:
-                    ground_variant = "default"
 
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                         (ISOMETRIC_HEIGHT1 / 2) - y, ground_variant, painter)
 
-        if self.is_empty:
-            return
-
         # Draw all blocks in chunk sorted by x, y, z.
         for i in range(16):
             for j in range(16):
-                for z in range(3):
+                for citizen in self.citizens[i][j]:
+                    citizen.draw(painter, x, y)
+
+                for z in range(4):
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
@@ -293,9 +295,6 @@ class Town:
                     -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
                         size.height() * self.cam_z):
                     chunk.draw(painter, x, y)
-        
-        for citizen in self.citizens:
-            citizen.draw(painter)
 
         painter.restore()
 
@@ -342,7 +341,7 @@ class Town:
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
             self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
-                tuple(tuple([None] * 4 for j in range(16)) for i in range(16))
+                tuple(tuple([None] * 5 for j in range(16)) for i in range(16))
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
         """Change zoom."""
@@ -404,7 +403,14 @@ class Citizen:
         town.citizens.append(self)
         self.x = random() * 255
         self.y = random() * 255
+        self._addToMap()
 
-    def draw(self, painter: QPainter) -> None:
-        painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - self.town.cam_x,
-                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - self.town.cam_y, getImage("human"))
+    def _addToMap(self):
+        insort(self.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)], self)
+
+    def __gt__(self, other) -> bool:
+        return (self.y, self.x) > (other.y, other.x)
+
+    def draw(self, painter: QPainter, x: float, y: float) -> None:
+        painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - 22 - x,
+                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - 40 - y, getImage("human"))
