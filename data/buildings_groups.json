@@ -1,0 +1,11 @@
+{
+    "default": {
+        "max_dist": 5
+    },
+    "reach": {
+        "max_dist": 3
+    },
+    "poor": {
+        "max_dist": 5
+    }
+}

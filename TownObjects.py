@@ -59,7 +59,6 @@ class Block:
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
 
     def placesThatMustBeEmpty(self, angle: int, x: int, y: int, variant: str) -> Set[Tuple[int, int]]:
-        print(f'--- must be empty (original) is {self.empty[variant]}')
         answer = set()
         for side in self.empty[variant]:
             side = (side + angle) % 360
@@ -113,19 +112,19 @@ class GroundsManager:
 Grounds = GroundsManager()
 
 
+GROUPS_DATA = getJSON("buildings_groups")
+
+
 class BuildingGroups:
     """Store data of groups of Buildings."""
-    default = 0
-    reach = 1
-    poor = 2
-    distances = {default: 5, reach: 3, poor: 5}
+    distances = {group: GROUPS_DATA[group]['max_dist'] for group in GROUPS_DATA}
 
 
 class BuildingType:
     """Store information about some building type."""
 
     def __init__(self, blocks: Dict[str, List[List[List[str]]]], group: str):
-        self.group = eval(f'BuildingGroups.{group}')
+        self.group = group
         ##################################################################################
         self.blocks = {}
         self.possible_variants = {}
