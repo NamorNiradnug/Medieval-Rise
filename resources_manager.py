@@ -6,7 +6,7 @@ from PyQt5.Qt import QImage
 imageResources = {}
 
 
-def getImage(name: str) -> QImage:
+def getImage(name: str, get_null: bool = False) -> QImage:
     """PNG image called name in assets."""
 
     if name in imageResources:
@@ -14,8 +14,10 @@ def getImage(name: str) -> QImage:
     else:
         resource = QImage(f"assets/{name}.png")
         if resource.isNull():
-            raise ValueError(f"Resource {name}.png doesn't exist")
-        imageResources[name] = resource
+            if not get_null:
+                raise ValueError(f"Resource {name}.png doesn't exist")
+        else:
+            imageResources[name] = resource
         return resource
 
 

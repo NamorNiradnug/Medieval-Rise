@@ -57,7 +57,7 @@ class Frame(QMainWindow):
         self.chosen_btype = 0
         self.mode = Modes.Town
 
-        self.draw_thread = Interval(1 / 60, self.update)
+        self.draw_thread = Interval(1 / 160, self.update)
         self.check_thread = Interval(1 / 40, self.mousePositionEvent)
         self.town_tic_thread = Interval(1 / 20, lambda: town.tic(self.size()))
         self.town_tic_thread.start()
@@ -149,7 +149,6 @@ class Frame(QMainWindow):
 
     def mousePositionEvent(self) -> None:
         """Do something dependent on cursor position."""
-
         
         cursor_pos = self.cursor().pos()
 

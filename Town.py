@@ -12,10 +12,10 @@ from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
 def isometric(x: float, y: float) -> QPointF:
     """Convert rectangular coordinates to isometric."""
 
-    # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = y
+    # (iso_x + iso_y) * ISOMETRIC_HEIGHT1 = y
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = x
-    return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
-                   ((y / (ISOMETRIC_HEIGHT1 / 2)) - (x / ISOMETRIC_WIDTH))) / 2
+    return QPointF(((y / ISOMETRIC_HEIGHT1) + (x / ISOMETRIC_WIDTH)),
+                   ((y / ISOMETRIC_HEIGHT1) - (x / ISOMETRIC_WIDTH))) / 2
 
 
 def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
@@ -40,7 +40,7 @@ class Chunk:
         self.with_mask = set()
         self.citizens = tuple(tuple([] for _ in range(16)) for _ in range(16))
 
-    def draw(self, painter: QPainter, x: float, y: float) -> None:
+    def draw(self, painter: QPainter, x: int, y: int) -> None:
         """Draw chunk."""
 
         # Draw the ground.
@@ -52,7 +52,7 @@ class Chunk:
                     ground_variant = "green"
 
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        (ISOMETRIC_HEIGHT1 / 2) - y, ground_variant, painter)
+                                        ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
 
         # Draw all blocks in chunk sorted by x, y, z.
         for i in range(16):
@@ -64,10 +64,10 @@ class Chunk:
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
-                            painter.setOpacity(.6)
+                            painter.setOpacity(.8)
                         block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
                         block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                   (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
+                                   ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
                         painter.setOpacity(1)
 
 
@@ -226,6 +226,7 @@ class ProjectedBuilding:
         """Destroy projecting building."""
 
         self._delOldBlocks()
+        self.town.setBuildingMaskForGroup()
         del self
 
     def _delOldBlocks(self) -> None:
@@ -282,8 +283,8 @@ class Town:
     def draw(self, painter: QPainter, size: QSize) -> None:
         """Draw town on screen with changed size."""
 
-        x = self.cam_x - (self.cam_z * size.width()) // 2
-        y = self.cam_y - (self.cam_z * size.height()) // 2
+        x = int(self.cam_x - (self.cam_z * size.width()) / 2)
+        y = int(self.cam_y - (self.cam_z * size.height()) / 2)
 
         painter.save()
         painter.scale(self.scale, self.scale)
@@ -310,11 +311,11 @@ class Town:
         return True
 
     def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
-        x = self.cam_x - (self.cam_z * size.width()) // 2
-        y = self.cam_y - (self.cam_z * size.height()) // 2
-        return (-16 * ISOMETRIC_WIDTH < ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <
+        x = int(self.cam_x - (self.cam_z * size.width()) / 2)
+        y = int(self.cam_y - (self.cam_z * size.height()) / 2)
+        return (-16 * ISOMETRIC_WIDTH <= ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <=
                     size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
-                -32 * ISOMETRIC_HEIGHT1 / 2 < ((chunk.x + chunk.y) * (ISOMETRIC_HEIGHT1 / 2) - y) <
+                -32 * ISOMETRIC_HEIGHT1 <= ((chunk.x + chunk.y) * ISOMETRIC_HEIGHT1 - y) <=
                     size.height() * self.cam_z)
 
     def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
@@ -353,13 +354,16 @@ class Town:
             self.cam_z += delta
             self.scale = 1 / self.cam_z
 
-    def setBuildingMaskForGroup(self, group: int) -> None:
+    def setBuildingMaskForGroup(self, group: str = None) -> None:
         """Add green front light on places building with changed group."""
 
         for chunks in self.chunks:
             for chunk in chunks:
                 chunk.with_mask = set()
         
+        if group is None:
+            return
+
         is_group_exist = False
         
         radius = BuildingGroups.distances[group]
@@ -427,9 +431,9 @@ class Citizen:
     def __gt__(self, other) -> bool:
         return (self.y, self.x) > (other.y, other.x)
 
-    def draw(self, painter: QPainter, x: float, y: float) -> None:
+    def draw(self, painter: QPainter, x: int, y: int) -> None:
         painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - 22 - x,
-                          (self.x + self.y) * ISOMETRIC_HEIGHT1 / 2 - 53 - y, getImage("human"))
+                          (self.x + self.y) * ISOMETRIC_HEIGHT1 - 53 - y, getImage("human"))
 
     def step(self):
         self._delFromOldPosition()

@@ -7,7 +7,7 @@ from PyQt5.QtGui import QPainter
 from resources_manager import getImage, getJSON
 
 ISOMETRIC_WIDTH = 64    # |
-ISOMETRIC_HEIGHT1 = 64  # | textures parameters
+ISOMETRIC_HEIGHT1 = 32  # | textures parameters
 ISOMETRIC_HEIGHT2 = 79  # |
 
 BLOCKS_DATA = getJSON("blocks")
@@ -31,8 +31,10 @@ class Block:
         self.variants = {
             variant: {
                 angle * 90: (
-                    getImage(f"{BLOCKS_DATA[name][variant][sides[(4 - angle) % 4]]}_left"),
-                    getImage(f"{BLOCKS_DATA[name][variant][sides[(5 - angle) % 4]]}_right"),
+                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(4 - angle) % 4], 'NULL')}_left", True),
+                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(5 - angle) % 4], 'NULL')}_right", True),
+                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(6 - angle) % 4], 'NULL')}_right_back", True),
+                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(7 - angle) % 4], 'NULL')}_left_back", True)
                 )
                 for angle in range(4)
             }
@@ -51,10 +53,12 @@ class Block:
     def __str__(self):
         return f"Block {self.name}"
 
-    def draw(self, x: float, y: float, angle: int, painter: QPainter, variant: str) -> None:
+    def draw(self, x: int, y: int, angle: int, painter: QPainter, variant: str) -> None:
         if variant not in self.variants:
             raise AttributeError(f"Block called {self.name} has not variant {variant}.")
 
+        painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2 - ISOMETRIC_HEIGHT1, self.variants[variant][angle][3])
+        painter.drawImage(x, y - ISOMETRIC_HEIGHT2 - ISOMETRIC_HEIGHT1, self.variants[variant][angle][2])
         painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
 
@@ -215,7 +219,7 @@ class BuildingType:
                     if blocks[block_x][block_y][z] is not None:
                         blocks[block_x][block_y][z].draw(
                             (block_x - block_y) * ISOMETRIC_WIDTH + fx,
-                            (block_x + block_y) * (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 + fy,
+                            (block_x + block_y) * ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 + fy,
                             0, painter, self.default_blocks[block_x][block_y][z]
                         )
 
