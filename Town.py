@@ -9,6 +9,7 @@ from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
 
 def isometric(x: float, y: float) -> QPointF:
     """Convert rectangular coordinates to isometric."""
+
     # (iso_x + iso_y) * (ISOMETRIC_HEIGHT1 / 2) = x
     # (iso_x - iso_y) * ISOMETRIC_WIDTH = y
     return QPointF(((y / (ISOMETRIC_HEIGHT1 / 2)) + (x / ISOMETRIC_WIDTH)),
@@ -16,6 +17,8 @@ def isometric(x: float, y: float) -> QPointF:
 
 
 def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
+    """Checking the position of a point relative to a rectangle."""
+
     return (
         rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
         and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
@@ -23,7 +26,7 @@ def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
 
 
 class Chunk:
-    """Store data of blocks in 16 by 16 square"""
+    """Store data of blocks in 16 by 16 square."""
 
     def __init__(self, x: int, y: int):
         self.x = x * 16
@@ -35,6 +38,8 @@ class Chunk:
         self.with_mask = set()
 
     def draw(self, painter: QPainter, x: float, y: float) -> None:
+        """Draw chunk."""
+
         # Draw the ground.
         for i in range(16):
             for j in range(16):
@@ -71,7 +76,7 @@ class TownObjectType:
 
 
 def turnMatrix(blocks: Tuple[Tuple[Any]], angle: int) -> Tuple[Tuple[Any]]:
-    """Turn matrix of Blocks (with angle 0 degrees) on angle (in degrees)"""
+    """Turn matrix of Blocks on changed angle (in degrees)"""
 
     # blocks is a matrix, so its height is the length of blocks[0]
     height = len(blocks[0])
@@ -101,6 +106,8 @@ class TownObject:
 
 
 class Building(TownObject):
+    """Building class. It only exists. For now."""
+
     def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
@@ -117,6 +124,8 @@ class Building(TownObject):
                         town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def destroy(self) -> None:
+        """Destroy building."""
+
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
@@ -125,6 +134,8 @@ class Building(TownObject):
         del self
 
     def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
+        """Data of block on global position x, y, z."""
+
         return (
             self.blocks[x - self.x][y - self.y][z],
             self.angle,
@@ -173,11 +184,19 @@ class ProjectedBuilding:
         return self._building_type.group
 
     def center(self) -> Tuple[int, int]:
+        """Center of building."""
+
         return self.x + len(self.blocks) // 2, self.y + len(self.blocks[0]) // 2
 
-    # TODO door check
+    def doorCheck(self) -> bool:
+        for x in range(self.x - 1, self.x + len(self.blocks) + 1):
+            for y in range(self.y - 1, self.y + len(self.blocks[0]) + 1):
+                if town.getBuilding(x, y) is not None and self.town.getBuilding(x, y).getBlock(x, y, 0)[0] == BuildingTypes.door:
+
 
     def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
+        """Data of block on global position x, y, z."""
+
         return (
             self.blocks[x - self.x][y - self.y][z],
             self._angle,
@@ -185,6 +204,8 @@ class ProjectedBuilding:
         )
 
     def build(self) -> None:
+        """Build projecting building."""
+
         if self.town.isBlocksEmpty(self.x, self.y, self.blocks):
             if self.town.isNearBuildingWithGroup(self.group(), self.center()):
                 self._delOldBlocks()
@@ -194,6 +215,8 @@ class ProjectedBuilding:
                 self.town.setBuildingMaskForGroup(self.group())
 
     def destroy(self) -> None:
+        """Destroy projecting building."""
+
         self._delOldBlocks()
         del self
 
@@ -205,11 +228,15 @@ class ProjectedBuilding:
                         self.town.removeBlock(x + self.x, y + self.y, z)
 
     def generateVariants(self):
+        """Generate appearance of projecting building."""
+
         self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
         self.blocks_variants = turnMatrix(self.blocks_variants, self._angle)
         self.blocks = turnMatrix(self._building_type.blocks[self._btype_variant], self._angle)
 
     def setBuildingType(self, building_type: BuildingType) -> None:
+        """Change building type of projecting buildings."""
+
         self._delOldBlocks()
         self._building_type = building_type
         self.generateVariants()
@@ -217,6 +244,8 @@ class ProjectedBuilding:
         self._addNewBlocks()
 
     def turn(self, delta_angle: int) -> None:
+        """Turn projecting building on changed angle"""
+
         if delta_angle not in {90, -90}:
             raise AttributeError(f"Buildings can turn on 90 or -90 degrees, not {delta_angle}")
 
@@ -243,6 +272,8 @@ class Town:
             self.chunks[x // 16][y // 16].is_empty = False
 
     def draw(self, painter: QPainter, size: QSize) -> None:
+        """Draw town on screen with changed size."""
+
         x = self.cam_x - (self.cam_z * size.width()) // 2
         y = self.cam_y - (self.cam_z * size.height()) // 2
 
@@ -266,11 +297,15 @@ class Town:
         return True
 
     def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
+        """Check for buildings on position x, y, z."""
+
         if 0 <= x <= 255 and 0 <= y <= 255:
-            return isinstance(self.getBlock(x, y, z), (type(None), ProjectedBuilding))
+            return isinstance(self.getBuilding(x, y, z), (type(None), ProjectedBuilding))
         return True
 
     def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
+        """Check for buildings in radius equel group max distance."""
+
         is_group_exist = False
         for building in self.buildings:
             if building.building_type.group == group:
@@ -280,27 +315,35 @@ class Town:
 
         radius = BuildingGroups.distances[group]
         for x, y in self.manhattenCircle(point, radius):
-            if not self.isBlockEmpty(x, y, 0) and self.getBlock(x, y).building_type.group == group:
+            if not self.isBlockEmpty(x, y, 0) and self.getBuilding(x, y).building_type.group == group:
                 return True
         return False
 
-    def getBlock(self, x: int, y: int, z: int = 0) -> Any:
+    def getBuilding(self, x: int, y: int, z: int = 0) -> Any:
+        """Building on position x, y, z."""
+
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
+        """Remove Building from position x, y, z."""
+
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = None
             self.chunks[x // 16][y // 16].is_empty = self.chunks[x // 16][y // 16].blocks == \
                 tuple(tuple([None] * 4 for j in range(16)) for i in range(16))
 
     def scaleByEvent(self, event: QWheelEvent) -> None:
+        """Change zoom."""
+
         delta = -event.angleDelta().y() / (self.scale * 480)
         if 0.5 <= self.cam_z + delta <= 3:
             self.cam_z += delta
             self.scale = 1 / self.cam_z
 
     def setBuildingMaskForGroup(self, group: int) -> None:
+       """Add green front light on places building with changed group."""
+
         for chunks in self.chunks:
             for chunk in chunks:
                 chunk.with_mask = set()
@@ -325,11 +368,14 @@ class Town:
     # TODO saving
 
     def translate(self, delta: QPoint) -> None:
+        """Translate camera."""
+        
         self.cam_x -= delta.x() * self.cam_z
         self.cam_y -= delta.y() * self.cam_z
 
     @staticmethod
     def manhattenCircle(center: Tuple[int, int], radius: int) -> Set[Tuple[int, int]]:
+        """All integer points inside a manhatten circle with changed center and radius."""
         answer = set()
         for x_abs in range(radius + 1):
             for y_abs in range(radius - x_abs + 1):
