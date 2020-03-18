@@ -64,7 +64,7 @@ class Chunk:
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
-                            painter.setOpacity(.9)
+                            painter.setOpacity(.6)
                         block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
                         block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                    (ISOMETRIC_HEIGHT1 / 2) - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
