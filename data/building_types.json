@@ -1,5 +1,6 @@
 {
     "little_house": {
+        "group": "poor",
         "blocks": {
             "0": [
                 [
@@ -12,7 +13,7 @@
         }
     },
     "house": {
-        "group": "forts",
+        "group": "reach",
         "blocks": {
             "middle_door": [
                 [
@@ -43,6 +44,7 @@
         }
     },
     "some_house": {
+        "group": "poor",
         "blocks": {
             "first": [
                 [

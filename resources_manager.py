@@ -7,6 +7,8 @@ imageResources = {}
 
 
 def getImage(name: str) -> QImage:
+    """PNG image called name in assets."""
+
     if name in imageResources:
         return imageResources[name]
     else:
@@ -18,5 +20,7 @@ def getImage(name: str) -> QImage:
 
 
 def getJSON(name: str) -> dict:
+    """Converted JSON file called name in data."""
+    
     with open(f'data/{name}.json') as f:
         return json.load(f)

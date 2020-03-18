@@ -1,6 +1,6 @@
 from json import load
 from random import choice
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from PyQt5.QtGui import QPainter
 
@@ -16,6 +16,8 @@ BUILDING_TYPES_DATA = getJSON("building_types")
 
 
 def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
+    """Max height of matrix."""
+
     return max([len(blocks_y) for blocks_y in matrix])
 
 
@@ -27,14 +29,20 @@ class Block:
 
         sides = ("NORTH", "WEST", "SOUTH", "EAST")
         self.variants = {
-            i: {
-                j * 90: (
-                    getImage(f"{BLOCKS_DATA[name][i][sides[(4 - j) % 4]]}_left"),
-                    getImage(f"{BLOCKS_DATA[name][i][sides[(5 - j) % 4]]}_right"),
+            variant: {
+                angle * 90: (
+                    getImage(f"{BLOCKS_DATA[name][variant][sides[(4 - angle) % 4]]}_left"),
+                    getImage(f"{BLOCKS_DATA[name][variant][sides[(5 - angle) % 4]]}_right"),
                 )
-                for j in range(4)
+                for angle in range(4)
             }
-            for i in BLOCKS_DATA[name]
+            for variant in BLOCKS_DATA[name]
+        }
+
+        self.empty = {
+            variant:
+                tuple(sides.index(side) * 90 for side in BLOCKS_DATA[name][variant].get('empty', []))
+            for variant in BLOCKS_DATA[name]
         }
 
     def __repr__(self):
@@ -50,6 +58,20 @@ class Block:
         painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
 
+    def placesThatMustBeEmpty(self, angle: int, x: int, y: int, variant: str) -> Set[Tuple[int, int]]:
+        print(f'--- must be empty (original) is {self.empty[variant]}')
+        answer = set()
+        for side in self.empty[variant]:
+            side = (side + angle) % 360
+            if side == 0:
+                answer.add((x, y + 1))
+            elif side == 90:
+                answer.add((x + 1, y))
+            elif side == 180:
+                answer.add((x, y - 1))
+            else:
+                answer.add((x - 1, y))
+        return answer
 
 class BlocksManager:
     """Store all blocks.
@@ -94,8 +116,9 @@ Grounds = GroundsManager()
 class BuildingGroups:
     """Store data of groups of Buildings."""
     default = 0
-    forts = 1
-    distances = {0: 5, 1: 2}
+    reach = 1
+    poor = 2
+    distances = {default: 5, reach: 3, poor: 5}
 
 
 class BuildingType:

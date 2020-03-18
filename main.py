@@ -11,6 +11,8 @@ import Town
 
 
 class Interval(Thread):
+    """Periodical thread."""
+
     def __init__(self, interval: float, func: FunctionType):
         Thread.__init__(self)
         self.stopped = Event()
@@ -33,12 +35,16 @@ class Modes(Enum):
 
 
 def transparentCursor() -> QCursor:
+    """Transparent 32x32 cursor."""
+
     pix = QPixmap(32, 32)
     pix.fill(Qt.transparent)
     return QCursor(pix)
 
 
 class Frame(QMainWindow):
+    """Window showing town."""
+
     def __init__(self, town: Town.Town):
         super().__init__()
         self.setMouseTracking(True)
@@ -139,6 +145,9 @@ class Frame(QMainWindow):
         painter.end()
 
     def mousePositionEvent(self) -> None:
+        """Do something dependent on cursor position."""
+
+        
         cursor_pos = self.cursor().pos()
 
         if self.last_button == Qt.NoButton \

@@ -191,8 +191,12 @@ class ProjectedBuilding:
     def doorCheck(self) -> bool:
         for x in range(self.x - 1, self.x + len(self.blocks) + 1):
             for y in range(self.y - 1, self.y + len(self.blocks[0]) + 1):
-                if town.getBuilding(x, y) is not None and self.town.getBuilding(x, y).getBlock(x, y, 0)[0] == BuildingTypes.door:
-
+                if self.town.getBuilding(x, y) is not None:
+                    block, angle, variant = self.town.getBuilding(x, y).getBlock(x, y, 0)
+                    for mx, my in block.placesThatMustBeEmpty(angle, x, y, variant):
+                        if self.town.getBuilding(mx, my) is not None:
+                            return False
+        return True
 
     def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
         """Data of block on global position x, y, z."""
@@ -206,7 +210,7 @@ class ProjectedBuilding:
     def build(self) -> None:
         """Build projecting building."""
 
-        if self.town.isBlocksEmpty(self.x, self.y, self.blocks):
+        if self.town.isBlocksEmpty(self.x, self.y, self.blocks) and self.doorCheck():
             if self.town.isNearBuildingWithGroup(self.group(), self.center()):
                 self._delOldBlocks()
                 Building(self.x, self.y, self._angle, self.town, self._building_type,
@@ -220,14 +224,14 @@ class ProjectedBuilding:
         self._delOldBlocks()
         del self
 
-    def _delOldBlocks(self):
+    def _delOldBlocks(self) -> None:
         for x in range(len(self.blocks)):
             for y in range(len(self.blocks[0])):
                 for z in range(len(self.blocks[x][y])):
                     if self.town.isBlockEmpty(x + self.x, y + self.y, z):
                         self.town.removeBlock(x + self.x, y + self.y, z)
 
-    def generateVariants(self):
+    def generateVariants(self) -> None:
         """Generate appearance of projecting building."""
 
         self._btype_variant, self.blocks_variants = self._building_type.generateVariant()
@@ -254,6 +258,7 @@ class ProjectedBuilding:
         self.blocks = turnMatrix(self.blocks, delta_angle % 360)
         self.blocks_variants = turnMatrix(self.blocks_variants, delta_angle % 360)
         self._addNewBlocks()
+
 
 class Town:
     def __init__(self):
@@ -319,10 +324,10 @@ class Town:
                 return True
         return False
 
-    def getBuilding(self, x: int, y: int, z: int = 0) -> Any:
+    def getBuilding(self, x: int, y: int, z: int = 0) -> Building:
         """Building on position x, y, z."""
 
-        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 3:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
@@ -342,7 +347,7 @@ class Town:
             self.scale = 1 / self.cam_z
 
     def setBuildingMaskForGroup(self, group: int) -> None:
-       """Add green front light on places building with changed group."""
+        """Add green front light on places building with changed group."""
 
         for chunks in self.chunks:
             for chunk in chunks:
@@ -356,7 +361,7 @@ class Town:
                 is_group_exist = True
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
-                        if self.getBlock(i, j) is not None:
+                        if self.getBuilding(i, j) is not None:
                             for x, y in self.manhattenCircle((i, j), radius):
                                 self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
         
@@ -369,13 +374,14 @@ class Town:
 
     def translate(self, delta: QPoint) -> None:
         """Translate camera."""
-        
+
         self.cam_x -= delta.x() * self.cam_z
         self.cam_y -= delta.y() * self.cam_z
 
     @staticmethod
     def manhattenCircle(center: Tuple[int, int], radius: int) -> Set[Tuple[int, int]]:
         """All integer points inside a manhatten circle with changed center and radius."""
+
         answer = set()
         for x_abs in range(radius + 1):
             for y_abs in range(radius - x_abs + 1):

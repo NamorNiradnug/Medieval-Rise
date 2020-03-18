@@ -4,13 +4,15 @@
             "NORTH": "stone_diag",
             "EAST": "wood_window",
             "SOUTH": "wood_door",
-            "WEST": "wood_window"
+            "WEST": "wood_window",
+            "empty": ["SOUTH"]
         },
         "east_door": {
             "NORTH": "wood_window",
             "EAST": "wood_door",
             "SOUTH": "wood",
-            "WEST": "wood_cross"
+            "WEST": "wood_cross",
+            "empty": ["EAST"]
         }
     },
     "house": {
