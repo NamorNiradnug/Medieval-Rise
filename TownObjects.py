@@ -275,7 +275,13 @@ class RoadTypesManager:
     sorted_names = sorted(road_types)
 
     def __getattr__(self, item: str):
+        if item not in self.building_types:
+            raise AttributeError(f'Building type "{item}" does not exists.')
+
         return self.road_types[item]
+
+    def getByNumber(self, num: int) -> RoadType:
+        return self.__getattr__(self.sorted_names[num])
 
 
 RoadTypes = RoadTypesManager()
