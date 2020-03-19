@@ -131,7 +131,7 @@ class Frame(QMainWindow):
                         QSize(self.height() / 15, self.height() / 15)
                 )):
                     self.mode = Modes.Destroy
-                    self.setCursor(transparentCursor())
+                    # self.setCursor(transparentCursor())
                 else:
                     if self.menu_mode == 1:
                         types = Town.BuildingTypes
@@ -143,12 +143,15 @@ class Frame(QMainWindow):
                                 self.height() * .8 + self.menuAnimation
                         ), QSize(self.height() * .2, self.height() * .2))):
                             self.mode = Modes(self.menu_mode)
-                            self.town.chosen_btype = i
-                            self.town.chosen_building = Town.ProjectedBuilding(
-                                self.town,
-                                Town.BuildingTypes.getByNumber(self.town.chosen_btype)
-                            )
-                            self.setCursor(transparentCursor())
+                            if self.menu_mode == 1:
+                                self.town.chosen_btype = i
+                                self.town.chosen_building = Town.ProjectedBuilding(
+                                    self.town,
+                                    Town.BuildingTypes.getByNumber(self.town.chosen_btype)
+                                )
+                            else:
+                                self.town.projecting_road = Town.ProjectingRoad(self.town)
+                            # self.setCursor(transparentCursor())
                             break
             elif self.mode == Modes.TownBuilder:
                 if self.town.chosen_building.build():
