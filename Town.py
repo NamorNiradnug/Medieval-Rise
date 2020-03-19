@@ -6,7 +6,8 @@ from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
 
 from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
-                         Block, BuildingType, BuildingTypes, Grounds, BuildingGroups, getImage)
+                         Block, BuildingType, BuildingTypes, Grounds, BuildingGroups, getImage,
+                         RoadType, RoadTypes)
 
 
 def isometric(x: float, y: float) -> QPointF:
@@ -43,7 +44,6 @@ class Chunk:
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         """Draw chunk."""
-        painter.drawImage(0, 0, getImage('road'))
         for i in range(16):
             for j in range(16):
 
@@ -115,34 +115,38 @@ class TownObject:
 class Road(TownObject):
     """Roads. They have to be pretty..."""
 
-    def __init__(self, town: 'Town', x: int, y: int):
+    def __init__(self, town: 'Town', x: int, y: int, road_type: RoadType):
         super().__init__(x, y, 0, town)
+        self.road_type = road_type
         town.chunks[x // 16][y // 16].roads[x % 16][y % 16] = self
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
+        textures = self.road_type.textures
+
         painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
-                          (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                          (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, textures['center'])
 
         if self.town.getRoad(self.x, self.y - 1) is not None:
-            painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
-                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+            painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - x,
+                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, textures['right-up'])
 
         if self.town.getRoad(self.x, self.y + 1) is not None:
             painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
-                              (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                              (self.x + self.y + 1) * ISOMETRIC_HEIGHT1 - y, textures['left-down'])
 
         if self.town.getRoad(self.x - 1, self.y) is not None:
             painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
-                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, textures['left-up'])
 
         if self.town.getRoad(self.x + 1, self.y) is not None:
-            painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
-                              (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+            painter.drawImage((self.x - self.y) * ISOMETRIC_WIDTH - x,
+                              (self.x + self.y + 1) * ISOMETRIC_HEIGHT1 - y, textures['right-down'])
 
 
 class ProjectingRoad:
-    def __init__(self, town: 'Town'):
+    def __init__(self, town: 'Town', road_type: RoadType = RoadTypes.road):
         self.town = town
+        self.road_type = road_type
         coords = isometric(town.cam_x, town.cam_y)
         self.x = round(coords.x())
         self.y = round(coords.y())
@@ -165,7 +169,7 @@ class ProjectingRoad:
     def build(self) -> bool:
         self._delFromMap()
         if self.town.isBlockEmpty(self.x, self.y, 0, False):
-            Road(self.town, self.x, self.y)
+            Road(self.town, self.x, self.y, self.road_type)
             return True
         return False
 
@@ -287,7 +291,7 @@ class ProjectedBuilding:
     def build(self) -> bool:
         """Build projecting building."""
 
-        if self.town.isBlocksEmpty(self.x, self.y, self.blocks) and self.doorCheck() and \
+        if self.town.isBlocksEmpty(self.x, self.y, self.blocks, False) and self.doorCheck() and \
                 self.town.isNearBuildingWithGroup(self.group(), self.center()):
             self._delOldBlocks()
             Building(

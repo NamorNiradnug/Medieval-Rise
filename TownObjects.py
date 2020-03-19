@@ -253,4 +253,27 @@ BuildingTypes = BuildingTypeManager()
 class RoadType:
     def __init__(self, name: str):
         self.textures = {'center': getImage(f'{name}_center'),
-                         'right-up': getImage(f'{name}_part')}
+                         'right-up': getImage(f'{name}_part').mirrored(False, True),
+                         'right-down': getImage(f'{name}_part').mirrored(True, True),
+                         'left-up': getImage(f'{name}_part'),
+                         'left-down': getImage(f'{name}_part').mirrored(True, False)}
+
+    def drawDefault(self,x: int, y: int, painter: QPainter) -> None:
+        painter.drawImage(x, y, self.textures['center'])
+
+
+ROAD_TYPES_DATA = getJSON('roads_types')
+
+
+class RoadTypesManager:
+    """Store all road types"""
+
+    road_types = {
+        item: RoadType(ROAD_TYPES_DATA[item]) for item in ROAD_TYPES_DATA
+    }
+
+    def __getattr__(self, item: str):
+        return self.road_types[item]
+
+
+RoadTypes = RoadTypesManager()
