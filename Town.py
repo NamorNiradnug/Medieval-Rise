@@ -52,12 +52,12 @@ class Chunk:
                 if (i, j) in self.with_mask:
                     ground_variant = "green"
 
-                    self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
+                self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                                    ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
 
                 # Draw road
                 if self.roads[i][j] is not None:
-                    self.roads[i][j].draw(painter)
+                    self.roads[i][j].draw(painter, x, y)
 
                 # Draw citizens
                 for citizen in self.citizens[i][j]:
@@ -110,6 +110,56 @@ class TownObject:
         self.y = y
         self.angle = angle
         self.town = town
+
+
+class Road:
+    """Roads. They have to be pretty..."""
+
+    def __init__(self, town: 'Town', x: int, y: int):
+        self.x = x
+        self.y = y
+        self.town = town
+        town.chunks[x // 16][y // 16].roads[x % 16][y % 16] = self
+
+    def draw(self, painter: QPainter, x: int, y: int) -> None:
+        painter.drawImage((self.x - self.y + .5) * ISOMETRIC_WIDTH - x,
+                          (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+
+
+class ProjectingRoad:
+    def __init__(self, town: 'Town'):
+        self.town = town
+        coords = isometric(town.cam_x, town.cam_y)
+        self.x = round(coords.x())
+        self.y = round(coords.y())
+        self._addToMap()
+
+    def _delFromMap(self) -> None:
+        if self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] is self:
+            self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = None
+
+    def _addToMap(self) -> None:
+        if self.town.isBlockEmpty(self.x, self.y, 0):
+            self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = self
+    
+    def addToMap(self, iso: QPointF) -> None:
+        self._delFromMap()
+        self.x = round(iso.x())
+        self.y = round(iso.y())
+        self._addToMap()
+
+    def build(self) -> None:
+        self._delFromMap()
+        if self.town.isBlockEmpty(self.x, self.y, 0):
+            Road(self.town, self.x, self.y)
+
+    def destroy(self) -> None:
+        self._delFromMap()
+        del self
+
+    def draw(self, painter: QPainter, x: int, y: int) -> None:
+        painter.drawImage((self.x - self.y + .5) * ISOMETRIC_WIDTH - x,
+                          (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
 
 
 class Building(TownObject):
@@ -176,7 +226,7 @@ class ProjectedBuilding:
                     if self.town.isBlockEmpty(x + self.x, y + self.y, z):
                         self.town.addBlock(x + self.x, y + self.y, z, self)
 
-    def addToMap(self, iso: QPointF, screen: QSize) -> None:
+    def addToMap(self, iso: QPointF) -> None:
         for x in range(len(self.blocks)):
             for y in range(len(self.blocks[0])):
                 for z in range(len(self.blocks[x][y])):
@@ -278,6 +328,7 @@ class Town:
 
         self.chosen_building = None
         self.chosen_btype = 0
+        self.projecting_road = None
 
         self.buildings = []
         # Generate 256 initial chunks.
@@ -314,7 +365,8 @@ class Town:
         """Check for buildings on position x, y, z."""
 
         if 0 <= x <= 255 and 0 <= y <= 255:
-            return isinstance(self.getBuilding(x, y, z), (type(None), ProjectedBuilding))
+            return (not isinstance(self.getBuilding(x, y, z), Building)) and \
+                (z != 0 or not isinstance(self.chunks[x // 16][y // 16].roads[x % 16][y % 16], Road)) 
         return True
 
     def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
@@ -418,19 +470,6 @@ class Town:
                                })
         return answer
 
-
-
-class Road:
-    """Roads. They have to be pretty..."""
-
-    def __init__(self, town: Town, x: int, y: int):
-        self.x = x
-        self.y = y
-        self.town = town
-        town.chunks[x // 16][y // 16].roads[x % 16][y % 16] = self
-
-    def draw(self):
-        pass
 
 class Citizen:
     """Citizen of building. He walks."""

@@ -32,6 +32,7 @@ class Modes(Enum):
 
     Town = 0
     TownBuilder = 1
+    TownRoadBuilder = 2
 
 
 def transparentCursor() -> QCursor:
@@ -57,7 +58,7 @@ class Frame(QMainWindow):
 
         self.draw_thread = Interval(1 / 160, self.update)
         self.check_thread = Interval(1 / 40, self.mousePositionEvent)
-        self.town_tic_thread = Interval(1 / 20, lambda: town.tic(self.size()))
+        self.town_tic_thread = Interval(1 / 20, lambda: town.tick(self.size()))
         self.town_tic_thread.start()
         self.draw_thread.start()
         self.check_thread.start()
@@ -86,6 +87,9 @@ class Frame(QMainWindow):
             if self.mode == Modes.TownBuilder:
                 self.town.chosen_building.build()
 
+            if self.mode == Modes.TownRoadBuilder:
+                self.town.projecting_road.build()
+
         self.last_button = Qt.NoButton
 
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
@@ -97,6 +101,13 @@ class Frame(QMainWindow):
                 self.town.chosen_building = Town.ProjectedBuilding(
                     self.town, Town.BuildingTypes.getByNumber(self.town.chosen_btype)
                 )
+                self.cursor().setPos(self.width() / 2, self.height() / 2)
+                self.setCursor(transparentCursor())
+
+        if event_key == Qt.Key_R:
+            if self.mode == Modes.Town:
+                self.mode = Modes.TownRoadBuilder
+                self.town.projecting_road = Town.ProjectingRoad(self.town)
                 self.cursor().setPos(self.width() / 2, self.height() / 2)
                 self.setCursor(transparentCursor())
 
@@ -125,6 +136,12 @@ class Frame(QMainWindow):
                 self.mode = Modes.Town
                 self.setCursor(QCursor())
 
+            if self.mode == Modes.TownRoadBuilder:
+                self.town.projecting_road.destroy()
+                self.town.projecting_road = None
+                self.mode = Modes.Town
+                self.setCursor(QCursor())
+
             if self.mode == Modes.Town:
                 # open pause menu
                 pass
@@ -132,12 +149,16 @@ class Frame(QMainWindow):
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
 
+        cursor_pos = (
+           self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
+            QPoint(self.town.cam_x, self.town.cam_y)
+        
         if self.mode == Modes.TownBuilder:
-            cursor_pos = (
-                self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
-                QPoint(self.town.cam_x, self.town.cam_y)
-            self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()), self.size())
+            self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
 
+        if self.mode == Modes.TownRoadBuilder:
+            self.town.projecting_road.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
+            
         self.town.draw(painter, self.size())
 
         if self.mode == Modes.TownBuilder:
