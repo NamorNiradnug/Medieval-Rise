@@ -272,6 +272,8 @@ class RoadTypesManager:
         item: RoadType(ROAD_TYPES_DATA[item]) for item in ROAD_TYPES_DATA
     }
 
+    sorted_names = sorted(road_types)
+
     def __getattr__(self, item: str):
         return self.road_types[item]
 
