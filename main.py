@@ -248,16 +248,6 @@ class Frame(QMainWindow):
 
         cursor_pos = self.cursor().pos()
 
-        if self.last_button == Qt.NoButton and not Town.isPointInRect(
-                cursor_pos,
-                (QPoint(10, 10), self.maximumSize() - QSize(20, 20))
-        ):
-            delta = QPoint(
-                (cursor_pos.x() - self.maximumWidth() // 2) / 40,
-                (cursor_pos.y() - self.maximumHeight() // 2) / 34
-            )
-            self.town.translate(-delta)
-
 
 if __name__ == "__main__":
     app = QApplication([])
