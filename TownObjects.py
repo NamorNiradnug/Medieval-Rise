@@ -259,7 +259,7 @@ class RoadType:
                          'left-down': getImage(f'{name}_part').mirrored(True, False)}
 
     def drawDefault(self,x: int, y: int, painter: QPainter) -> None:
-        painter.drawImage(x, y, self.textures['center'])
+        painter.drawImage(x - ISOMETRIC_WIDTH / 2, y - ISOMETRIC_HEIGHT1 / 2, self.textures['center'])
 
 
 ROAD_TYPES_DATA = getJSON('roads_types')
