@@ -1,4 +1,5 @@
 from bisect import insort, bisect
+from pprint import pprint
 from random import randint
 from typing import Any, Set, Tuple
 
@@ -43,7 +44,7 @@ class Chunk:
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         """Draw chunk."""
-
+        painter.drawImage(0, 0, getImage('road'))
         for i in range(16):
             for j in range(16):
 
@@ -112,17 +113,15 @@ class TownObject:
         self.town = town
 
 
-class Road:
+class Road(TownObject):
     """Roads. They have to be pretty..."""
 
     def __init__(self, town: 'Town', x: int, y: int):
-        self.x = x
-        self.y = y
-        self.town = town
+        super().__init__(x, y, 0, town)
         town.chunks[x // 16][y // 16].roads[x % 16][y % 16] = self
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
-        painter.drawImage((self.x - self.y + .5) * ISOMETRIC_WIDTH - x,
+        painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
                           (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
 
 
@@ -139,7 +138,7 @@ class ProjectingRoad:
             self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = None
 
     def _addToMap(self) -> None:
-        if self.town.isBlockEmpty(self.x, self.y, 0):
+        if self.town.isBlockEmpty(self.x, self.y, 0, False):
             self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = self
     
     def addToMap(self, iso: QPointF) -> None:
@@ -150,7 +149,7 @@ class ProjectingRoad:
 
     def build(self) -> None:
         self._delFromMap()
-        if self.town.isBlockEmpty(self.x, self.y, 0):
+        if self.town.isBlockEmpty(self.x, self.y, 0, False):
             Road(self.town, self.x, self.y)
 
     def destroy(self) -> None:
@@ -158,7 +157,7 @@ class ProjectingRoad:
         del self
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
-        painter.drawImage((self.x - self.y + .5) * ISOMETRIC_WIDTH - x,
+        painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
                           (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
 
 
@@ -179,6 +178,7 @@ class Building(TownObject):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     if self.blocks[block_x][block_y][block_z] is not None:
+                        print(f'add  block {block_x, block_y, block_z}')
                         town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def destroy(self) -> None:
@@ -203,8 +203,6 @@ class Building(TownObject):
 
 class ProjectedBuilding:
     """Building which player's projecting to build."""
-
-    # TODO more comfortable choosing of type.
 
     def __init__(self, town: 'Town', building_type: BuildingType = BuildingTypes.getByNumber(0)):
         self._building_type = building_type
@@ -268,7 +266,7 @@ class ProjectedBuilding:
     def build(self) -> None:
         """Build projecting building."""
 
-        if self.town.isBlocksEmpty(self.x, self.y, self.blocks) and self.doorCheck():
+        if self.town.isBlocksEmpty(self.x, self.y, self.blocks, False) and self.doorCheck():
             if self.town.isNearBuildingWithGroup(self.group(), self.center()):
                 self._delOldBlocks()
                 Building(self.x, self.y, self._angle, self.town, self._building_type,
@@ -353,20 +351,20 @@ class Town:
 
         painter.restore()
 
-    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]]) -> bool:
+    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]], road_is_not_block: bool = True) -> bool:
         for y in range(len(blocks[0])):
             for x in range(len(blocks)):
                 for z in range(len(blocks[x][y])):
-                    if blocks[x][y][z] is not None and not self.isBlockEmpty(x + iso_x, y + iso_y, z):
+                    if blocks[x][y][z] is not None and not self.isBlockEmpty(x + iso_x, y + iso_y, z, road_is_not_block):
                         return False
         return True
 
-    def isBlockEmpty(self, x: int, y: int, z: int) -> bool:
+    def isBlockEmpty(self, x: int, y: int, z: int, road_is_not_block: bool = True) -> bool:
         """Check for buildings on position x, y, z."""
 
-        if 0 <= x <= 255 and 0 <= y <= 255:
+        if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             return (not isinstance(self.getBuilding(x, y, z), Building)) and \
-                (z != 0 or not isinstance(self.chunks[x // 16][y // 16].roads[x % 16][y % 16], Road)) 
+                (road_is_not_block or z != 0 or not isinstance(self.chunks[x // 16][y // 16].roads[x % 16][y % 16], Road)) 
         return True
 
     def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
