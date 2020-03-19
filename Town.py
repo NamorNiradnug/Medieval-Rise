@@ -38,28 +38,32 @@ class Chunk:
         self.blocks = tuple(tuple([None] * 5 for _ in range(16)) for _ in range(16))
         self.grounds = tuple([Grounds.grass for _ in range(16)] for _ in range(16))
         self.with_mask = set()
+        self.roads = tuple([None for _ in range(16)] for _ in range(16))
         self.citizens = tuple(tuple([] for _ in range(16)) for _ in range(16))
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         """Draw chunk."""
 
-        # Draw the ground.
         for i in range(16):
             for j in range(16):
 
+                # Draw ground
                 ground_variant = "default"
                 if (i, j) in self.with_mask:
                     ground_variant = "green"
 
-                self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                    self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                         ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
 
-        # Draw all blocks in chunk sorted by x, y, z.
-        for i in range(16):
-            for j in range(16):
+                # Draw road
+                if self.roads[i][j] is not None:
+                    self.roads[i][j].draw(painter)
+
+                # Draw citizens
                 for citizen in self.citizens[i][j]:
                     citizen.draw(painter, x, y)
 
+                # Draw blocks
                 for z in range(5):
                     building = self.blocks[i][j][z]
                     if building is not None:
@@ -386,7 +390,7 @@ class Town:
 
     # TODO saving
 
-    def tic(self, screen: QSize) -> None:        
+    def tick(self, screen: QSize) -> None:        
         for chunks in self.chunks:
             for chunk in chunks:
                 if self._isChunkVisible(chunk, screen):
@@ -414,6 +418,19 @@ class Town:
                                })
         return answer
 
+
+
+class Road:
+    """Roads. They have to be pretty..."""
+
+    def __init__(self, town: Town, x: int, y: int):
+        self.x = x
+        self.y = y
+        self.town = town
+        town.chunks[x // 16][y // 16].roads[x % 16][y % 16] = self
+
+    def draw(self):
+        pass
 
 class Citizen:
     """Citizen of building. He walks."""
