@@ -8,6 +8,7 @@ from PyQt5.QtGui import QCloseEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEve
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 import Town
+from resources_manager import getImage
 
 
 class Interval(Thread):
@@ -53,6 +54,9 @@ class Frame(QMainWindow):
 
         self.town = town
 
+        self.default_cursor = QCursor(QPixmap("assets/cursor.png"))
+        self.setCursor(self.default_cursor)
+
         self.last_pos = self.cursor().pos()
         self.last_button = Qt.NoButton
         self.mode = Modes.Town
@@ -62,16 +66,13 @@ class Frame(QMainWindow):
         self.destroy_pos = None
 
         self.draw_thread = Interval(1 / 160, self.update)
-        self.check_thread = Interval(1 / 40, self.mousePositionEvent)
-        self.town_tic_thread = Interval(1 / 20, lambda: town.tick(self.size()))
-        self.town_tic_thread.start()
+        self.town_tick_thread = Interval(1 / 20, lambda: town.tick(self.size()))
+        self.town_tick_thread.start()
         self.draw_thread.start()
-        self.check_thread.start()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
-        self.check_thread.cancel()
-        self.town_tic_thread.cancel()
+        self.town_tick_thread.cancel()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.last_button = event.button()
@@ -83,7 +84,7 @@ class Frame(QMainWindow):
             elif self.menu_mode == 2:
                 types = Town.RoadTypes
             delta = event.pixelDelta()
-            if True:  # delta is None:
+            if delta is None:
                 delta = -event.angleDelta().y() / 2
             else:
                 delta = -delta.x() / 2
@@ -131,7 +132,7 @@ class Frame(QMainWindow):
                         QSize(self.height() / 15, self.height() / 15)
                 )):
                     self.mode = Modes.Destroy
-                    # self.setCursor(transparentCursor())
+                    self.setCursor(transparentCursor())
                 else:
                     if self.menu_mode == 1:
                         types = Town.BuildingTypes
@@ -151,12 +152,12 @@ class Frame(QMainWindow):
                                 )
                             else:
                                 self.town.projecting_road = Town.ProjectingRoad(self.town)
-                            # self.setCursor(transparentCursor())
+                            self.setCursor(transparentCursor())
                             break
             elif self.mode == Modes.TownBuilder:
                 if self.town.chosen_building.build():
                     self.mode = Modes.Town
-                    self.setCursor(QCursor())
+                    self.setCursor(self.default_cursor)
             elif self.mode == Modes.TownRoadBuilder:
                 self.town.projecting_road.build()
             elif self.mode == Modes.Destroy:
@@ -164,7 +165,7 @@ class Frame(QMainWindow):
                 if build:
                     build.destroy()
                     self.mode = Modes.Town
-                    self.setCursor(QCursor())
+                    self.setCursor(self.default_cursor)
 
         self.last_button = Qt.NoButton
 
@@ -196,28 +197,59 @@ class Frame(QMainWindow):
                 self.town.projecting_road = None
 
             self.mode = Modes.Town
-            self.setCursor(QCursor())
+            self.setCursor(self.default_cursor)
 
-    def drawButton(self, painter, rect, tex):
-        if Town.isPointInRect(self.cursor().pos() - self.pos(), (rect.topLeft(), rect.size())):
-            if self.last_button == Qt.LeftButton:
-                painter.fillRect(rect, Qt.red)
-                painter.drawRect(rect)
-                # painter.drawImage(rect, pressed tex)
-            else:
-                painter.fillRect(rect, Qt.green)
-                painter.drawRect(rect)
-                # painter.drawImage(rect, hover tex)
-        else:
-            painter.fillRect(rect, Qt.blue)
-            painter.drawRect(rect)
-            # painter.drawImage(rect, tex)
+    def drawButton(self, painter, cursor, rect, tex):
+        fix = ""
+        add = 4
+        if Town.isPointInRect(cursor, (rect.topLeft(), rect.size())) and self.last_button == Qt.LeftButton:
+            fix = "pressed_"
+            add = 0
+            rect.adjust(0, 4, 0, 0)
+        painter.drawTiledPixmap(rect.adjusted(10, 10, -10, -10), QPixmap.fromImage(getImage(f"button/body")))
+
+        painter.drawTiledPixmap(
+            QRect(rect.x() + 10, rect.y(), rect.width() - 20, 15), QPixmap.fromImage(getImage(f"button/top"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x() + 10, rect.y() + rect.height() - add - 15, rect.width() - 20, add + 15),
+            QPixmap.fromImage(getImage(f"button/{fix}bottom"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x(), rect.y() + 10, 15, rect.height() - add - 20),
+            QPixmap.fromImage(getImage(f"button/left"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x() + rect.width() - 15, rect.y() + 10, 15, rect.height() - add - 20),
+            QPixmap.fromImage(getImage(f"button/right"))
+        )
+
+        painter.drawTiledPixmap(
+            QRect(rect.x(), rect.y(), 15, 15),
+            QPixmap.fromImage(getImage(f"button/top_left"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x() + rect.width() - 15, rect.y(), 15, 15),
+            QPixmap.fromImage(getImage(f"button/top_right"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x(), rect.y() + rect.height() - add - 15, 15, add + 15),
+            QPixmap.fromImage(getImage(f"button/{fix}bottom_left"))
+        )
+        painter.drawTiledPixmap(
+            QRect(rect.x() + rect.width() - 15, rect.y() + rect.height() - add - 15, 15, add + 15),
+            QPixmap.fromImage(getImage(f"button/{fix}bottom_right"))
+        )
+
+        painter.drawPixmap(rect.adjusted(3, 3, -3, -add - 3), tex)
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
 
-        cursor_pos = (self.cursor().pos() - QPoint(self.width(), self.height()) / 2) \
-                     * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
+        cursor_pos = (self.cursor().pos() - self.frameGeometry().bottomRight() + QPoint(
+            self.width(),
+            self.height()
+        ) / 2) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
 
         if self.mode == Modes.TownBuilder:
             self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
@@ -226,54 +258,92 @@ class Frame(QMainWindow):
 
         self.town.draw(painter, self.size())
 
+        cursor = QPoint(
+            self.cursor().pos().x() - self.pos().x(),
+            self.cursor().pos().y() + self.height() - self.frameSize().height() - self.pos().y()
+        )
         if self.mode == Modes.Destroy:
             self.destroy_pos = (Town.isometric(cursor_pos.x(), cursor_pos.y()))
-            painter.fillRect(QRect(self.cursor().pos() - self.pos() - QPoint(60, 60) / 2, QSize(60, 60)), Qt.red)
-            # painter.drawImage(QRect(self.cursor().pos() - self.pos() - icon.bottomRight() / 2, icon.size()), icon)
+            painter.drawImage(QRect(cursor - QPoint(48, 48), QSize(96, 96)), getImage("destroy"))
 
         if self.mode == Modes.Town and self.menuAnimation > 0:
             self.menuAnimation -= 8
         elif self.mode != Modes.Town and self.menuAnimation < self.height() * .2:
             self.menuAnimation += 8
-        painter.fillRect(QRect(0, self.height() * .8 + self.menuAnimation, self.width(), self.height() * .2), Qt.gray)
+        painter.drawTiledPixmap(
+            QRect(20, self.height() * .8 + self.menuAnimation + 20, self.width() - 40, self.height() * .2 - 40),
+            QPixmap.fromImage(getImage("panel/body"))
+        )
+
+        painter.drawTiledPixmap(
+            QRect(20, self.height() * .8 + self.menuAnimation, self.width() - 40, 25),
+            QPixmap.fromImage(getImage("panel/top"))
+        )
+        painter.drawTiledPixmap(
+            QRect(20, self.height() + self.menuAnimation - 25, self.width() - 40, 25),
+            QPixmap.fromImage(getImage("panel/bottom"))
+        )
+        painter.drawTiledPixmap(
+            QRect(0, self.height() * .8 + self.menuAnimation + 20, 25, self.height() * .2 - 40),
+            QPixmap.fromImage(getImage("panel/left"))
+        )
+        painter.drawTiledPixmap(
+            QRect(self.width() - 25, self.height() * .8 + self.menuAnimation + 20, 25, self.height() * .2 - 40),
+            QPixmap.fromImage(getImage("panel/right"))
+        )
+
+        painter.drawImage(QRect(0, self.height() * .8 + self.menuAnimation, 25, 25), getImage("panel/top_left"))
+        painter.drawImage(
+            QRect(self.width() - 25, self.height() * .8 + self.menuAnimation, 25, 25), getImage("panel/top_right")
+        )
+        painter.drawImage(QRect(0, self.height() + self.menuAnimation - 25, 25, 25), getImage("panel/bottom_left"))
+        painter.drawImage(
+            QRect(self.width() - 25, self.height() + self.menuAnimation - 25, 25, 25), getImage("panel/bottom_right")
+        )
         if self.menu_mode == 1:
             types = Town.BuildingTypes
         elif self.menu_mode == 2:
             types = Town.RoadTypes
         for i in range(len(types.sorted_names)):
-            self.drawButton(painter, QRect(
+            pix = QPixmap(self.height() * .2, self.height() * .2)
+            pix.fill(Qt.transparent)
+            pain = QPainter(pix)
+            pain.save()
+            pain.translate(self.height() * .05, self.height() * .05)
+            pain.scale(.5, .5)
+            types.getByNumber(i).drawDefault(
+                self.height() * .1,
+                self.height() * .1,
+                pain
+            )
+            pain.restore()
+            pain.end()
+            self.drawButton(painter, cursor, QRect(
                 self.height() * (3 * i + 1) / 15 - self.scrollAmount,
                 self.height() * .8 + self.menuAnimation,
                 self.height() * .2,
                 self.height() * .2
-            ), None)  # button)
-            types.getByNumber(i).drawDefault(
-                self.height() * (6 * i + 5) / 30 - self.scrollAmount,
-                self.height() * .9 + self.menuAnimation,
-                painter
-            )
+            ), pix)
         self.drawButton(
             painter,
+            cursor,
             QRect(0, self.height() * .8 + self.menuAnimation, self.height() / 15, self.height() / 15),
-            None  # build button
+            QPixmap.fromImage(getImage("build"))
         )
         self.drawButton(
             painter,
+            cursor,
             QRect(0, self.height() * 13 / 15 + self.menuAnimation, self.height() / 15, self.height() / 15),
-            None  # road button
+            QPixmap.fromImage(getImage("road"))
         )
         self.drawButton(
             painter,
+            cursor,
             QRect(0, self.height() * 14 / 15 + self.menuAnimation, self.height() / 15, self.height() / 15),
-            None  # destroy button
+            QPixmap.fromImage(getImage("destroy"))
         )
 
         painter.end()
-
-    def mousePositionEvent(self) -> None:
-        """Do something dependent on cursor position."""
-
-        cursor_pos = self.cursor().pos()
 
 
 if __name__ == "__main__":
