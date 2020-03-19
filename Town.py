@@ -193,7 +193,6 @@ class Building(TownObject):
 
         self.blocks = turnMatrix(self.building_type.blocks[btype_variant], angle)
         self.blocks_variants = blocks_variants
-        self.citizen = Citizen(self)
 
         town.buildings.append(self)
         for block_x in range(len(self.blocks)):

@@ -76,6 +76,7 @@ class Block:
                 answer.add((x - 1, y))
         return answer
 
+
 class BlocksManager:
     """Store all blocks.
         Use Blocks.block_name to get Block(block_name)."""
@@ -247,3 +248,9 @@ class BuildingTypeManager:
 
 
 BuildingTypes = BuildingTypeManager()
+
+
+class RoadType:
+    def __init__(self, name: str):
+        self.textures = {'center': getImage(f'{name}_center'),
+                         'right-up': getImage(f'{name}_part')}
