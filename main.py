@@ -153,9 +153,9 @@ class Frame(QMainWindow):
         cursor_pos = self.cursor().pos()
 
         if self.last_button == Qt.NoButton \
-           and not Town.isPointInRect(cursor_pos, (QPoint(10, 10), self.size() - QSize(20, 20))):
-            delta = QPoint((cursor_pos.x() - self.size().width() // 2) / 40,
-                           (cursor_pos.y() - self.size().height() // 2) / 34)
+           and not Town.isPointInRect(cursor_pos, (QPoint(10, 10), self.maximumSize() - QSize(20, 20))):
+            delta = QPoint((cursor_pos.x() - self.maximumWidth() // 2) / 40,
+                           (cursor_pos.y() - self.maximumHeight() // 2) / 34)
             self.town.translate(-delta)
 
 
@@ -163,6 +163,7 @@ if __name__ == "__main__":
     app = QApplication([])
     town = Town.Town()
     frame = Frame(town)
+    frame.setMaximumSize(app.screens()[0].size())
     frame.setWindowTitle("Medieval Rise")
-    frame.showFullScreen()
+    frame.showMaximized()
     app.exec_()

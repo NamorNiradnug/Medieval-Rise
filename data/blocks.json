@@ -75,8 +75,11 @@
         }
     },
     "arch": {
-        "west": {
+        "firts": {
             "WEST": "stone_arch"
+        },
+        "second": {
+            "WEST": "stone_arch_2"
         }
     }
 }
