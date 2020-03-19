@@ -123,6 +123,22 @@ class Road(TownObject):
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
                           (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                          
+        if self.town.getRoad(self.x , self.y - 1) is not None:
+            painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
+                             (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+        
+        if self.town.getRoad(self.x, self.y + 1) is not None:
+            painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
+                              (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                              
+        if self.town.getRoad(self.x - 1, self.y) is not None:
+            painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
+                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+                              
+        if self.town.getRoad(self.x + 1, self.y) is not None:
+            painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
+                              (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
 
 
 class ProjectingRoad:
@@ -157,9 +173,12 @@ class ProjectingRoad:
         del self
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
-        painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
-                          (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+        painter.save()
+        painter.setOpacity(.8)
+        
+        Road.draw(self, painter, x, y)
 
+        painter.restore()
 
 class Building(TownObject):
     """Building class. It only exists. For now."""
@@ -364,7 +383,7 @@ class Town:
 
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             return (not isinstance(self.getBuilding(x, y, z), Building)) and \
-                (road_is_not_block or z != 0 or not isinstance(self.chunks[x // 16][y // 16].roads[x % 16][y % 16], Road)) 
+                (road_is_not_block or z != 0 or not isinstance(self.getRoad(x, y), Road)) 
         return True
 
     def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
@@ -396,6 +415,10 @@ class Town:
 
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
+
+    def getRoad(self, x: int, y: int) -> Road:
+        if 0 <= x <= 255 and 0 <= y <= 255:
+            return self.chunks[x // 16][y // 16].roads[x % 16][y % 16]
 
     def removeBlock(self, x: int, y: int, z: int) -> None:
         """Remove Building from position x, y, z."""
