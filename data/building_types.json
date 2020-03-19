@@ -91,11 +91,11 @@
                 [
                     [
                         "house:stone",
-                        "arch"
+                        "arch:second"
                     ],
                     [
                         "house:stone",
-                        "house:wood_window",
+                        "arch:first",
                         "roof"
                     ],
                     [
