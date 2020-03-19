@@ -1,5 +1,4 @@
 from bisect import insort, bisect
-from pprint import pprint
 from random import randint
 from typing import Any, Set, Tuple
 
@@ -23,8 +22,8 @@ def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
     """Checking the position of a point relative to a rectangle."""
 
     return (
-        rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
-        and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+            rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
+            and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
     )
 
 
@@ -54,7 +53,7 @@ class Chunk:
                     ground_variant = "green"
 
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                    ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
+                                        ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
 
                 # Draw road
                 if self.roads[i][j] is not None:
@@ -123,19 +122,19 @@ class Road(TownObject):
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         painter.drawImage((self.x - self.y - .5) * ISOMETRIC_WIDTH - x,
                           (self.x + self.y + .5) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
-                          
-        if self.town.getRoad(self.x , self.y - 1) is not None:
+
+        if self.town.getRoad(self.x, self.y - 1) is not None:
             painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
-                             (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
-        
+                              (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
+
         if self.town.getRoad(self.x, self.y + 1) is not None:
             painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
                               (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
-                              
+
         if self.town.getRoad(self.x - 1, self.y) is not None:
             painter.drawImage((self.x - self.y - .75) * ISOMETRIC_WIDTH - x,
                               (self.x + self.y + .25) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
-                              
+
         if self.town.getRoad(self.x + 1, self.y) is not None:
             painter.drawImage((self.x - self.y - .25) * ISOMETRIC_WIDTH - x,
                               (self.x + self.y + .75) * ISOMETRIC_HEIGHT1 - y, getImage("road"))
@@ -156,17 +155,19 @@ class ProjectingRoad:
     def _addToMap(self) -> None:
         if self.town.isBlockEmpty(self.x, self.y, 0, False):
             self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = self
-    
+
     def addToMap(self, iso: QPointF) -> None:
         self._delFromMap()
         self.x = round(iso.x())
         self.y = round(iso.y())
         self._addToMap()
 
-    def build(self) -> None:
+    def build(self) -> bool:
         self._delFromMap()
         if self.town.isBlockEmpty(self.x, self.y, 0, False):
             Road(self.town, self.x, self.y)
+            return True
+        return False
 
     def destroy(self) -> None:
         self._delFromMap()
@@ -175,15 +176,17 @@ class ProjectingRoad:
     def draw(self, painter: QPainter, x: int, y: int) -> None:
         painter.save()
         painter.setOpacity(.8)
-        
+
         Road.draw(self, painter, x, y)
 
         painter.restore()
 
+
 class Building(TownObject):
     """Building class. It only exists. For now."""
 
-    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType, blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
+    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType,
+                 blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
         self.btype_variant = btype_variant
@@ -251,7 +254,7 @@ class ProjectedBuilding:
                         self.town.removeBlock(x + self.x, y + self.y, z)
                     if self.town.isBlockEmpty(x + round(iso.x()), y + round(iso.y()), z):
                         self.town.addBlock(x + round(iso.x()), y + round(iso.y()), z, self)
-        
+
         self.x = round(iso.x())
         self.y = round(iso.y())
 
@@ -282,16 +285,25 @@ class ProjectedBuilding:
             self.blocks_variants[x - self.x][y - self.y][z],
         )
 
-    def build(self) -> None:
+    def build(self) -> bool:
         """Build projecting building."""
 
-        if self.town.isBlocksEmpty(self.x, self.y, self.blocks, False) and self.doorCheck():
-            if self.town.isNearBuildingWithGroup(self.group(), self.center()):
-                self._delOldBlocks()
-                Building(self.x, self.y, self._angle, self.town, self._building_type,
-                         self.blocks_variants, self._btype_variant)
-                self.generateVariants()
-                self.town.setBuildingMaskForGroup(self.group())
+        if self.town.isBlocksEmpty(self.x, self.y, self.blocks) and self.doorCheck() and \
+                self.town.isNearBuildingWithGroup(self.group(), self.center()):
+            self._delOldBlocks()
+            Building(
+                self.x,
+                self.y,
+                self._angle,
+                self.town,
+                self._building_type,
+                self.blocks_variants,
+                self._btype_variant
+            )
+            self.generateVariants()
+            self.town.setBuildingMaskForGroup(self.group())
+            return True
+        return False
 
     def destroy(self) -> None:
         """Destroy projecting building."""
@@ -370,11 +382,17 @@ class Town:
 
         painter.restore()
 
-    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]], road_is_not_block: bool = True) -> bool:
+    def isBlocksEmpty(self, iso_x: int, iso_y: int, blocks: Tuple[Tuple[Tuple[Block]]],
+                      road_is_not_block: bool = True) -> bool:
         for y in range(len(blocks[0])):
             for x in range(len(blocks)):
                 for z in range(len(blocks[x][y])):
-                    if blocks[x][y][z] is not None and not self.isBlockEmpty(x + iso_x, y + iso_y, z, road_is_not_block):
+                    if blocks[x][y][z] is not None and not self.isBlockEmpty(
+                            x + iso_x,
+                            y + iso_y,
+                            z,
+                            road_is_not_block
+                    ):
                         return False
         return True
 
@@ -383,16 +401,16 @@ class Town:
 
         if 0 <= x <= 255 and 0 <= y <= 255 and 0 <= z <= 4:
             return (not isinstance(self.getBuilding(x, y, z), Building)) and \
-                (road_is_not_block or z != 0 or not isinstance(self.getRoad(x, y), Road)) 
+                   (road_is_not_block or z != 0 or not isinstance(self.getRoad(x, y), Road))
         return True
 
     def _isChunkVisible(self, chunk: Chunk, size: QSize) -> bool:
         x = int(self.cam_x - (self.cam_z * size.width()) / 2)
         y = int(self.cam_y - (self.cam_z * size.height()) / 2)
         return (-16 * ISOMETRIC_WIDTH <= ((chunk.x - chunk.y) * ISOMETRIC_WIDTH - x) <=
-                    size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
+                size.width() * self.cam_z + 16 * ISOMETRIC_WIDTH and
                 -32 * ISOMETRIC_HEIGHT1 <= ((chunk.x + chunk.y) * ISOMETRIC_HEIGHT1 - y) <=
-                    size.height() * self.cam_z)
+                size.height() * self.cam_z)
 
     def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
         """Check for buildings in radius equel group max distance."""
@@ -405,7 +423,7 @@ class Town:
             return True
 
         radius = BuildingGroups.distances[group]
-        for x, y in self.manhattenCircle(point, radius):
+        for x, y in self.manhattanCircle(point, radius):
             if not self.isBlockEmpty(x, y, 0) and self.getBuilding(x, y).building_type.group == group:
                 return True
         return False
@@ -440,12 +458,12 @@ class Town:
         for chunks in self.chunks:
             for chunk in chunks:
                 chunk.with_mask = set()
-        
+
         if group is None:
             return
 
         is_group_exist = False
-        
+
         radius = BuildingGroups.distances[group]
         for building in self.buildings:
             if building.building_type.group == group:
@@ -453,9 +471,9 @@ class Town:
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
                         if self.getBuilding(i, j) is not None:
-                            for x, y in self.manhattenCircle((i, j), radius):
+                            for x, y in self.manhattanCircle((i, j), radius):
                                 self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
-        
+
         if not is_group_exist:
             for chunks in self.chunks:
                 for chunk in chunks:
@@ -463,7 +481,7 @@ class Town:
 
     # TODO saving
 
-    def tick(self, screen: QSize) -> None:        
+    def tick(self, screen: QSize) -> None:
         for chunks in self.chunks:
             for chunk in chunks:
                 if self._isChunkVisible(chunk, screen):
@@ -479,16 +497,16 @@ class Town:
         self.cam_y -= delta.y() * self.cam_z
 
     @staticmethod
-    def manhattenCircle(center: Tuple[int, int], radius: int) -> Set[Tuple[int, int]]:
-        """All integer points inside a manhatten circle with changed center and radius."""
+    def manhattanCircle(center: Tuple[int, int], radius: int) -> Set[Tuple[int, int]]:
+        """All integer points inside a Manhattan circle with changed center and radius."""
 
         answer = set()
         for x_abs in range(radius + 1):
             for y_abs in range(radius - x_abs + 1):
                 answer.update({
-                                (x_abs + center[0], y_abs + center[1]), (x_abs + center[0], -y_abs + center[1]),
-                                (-x_abs + center[0], y_abs + center[1]), (-x_abs + center[0], -y_abs + center[1])
-                               })
+                    (x_abs + center[0], y_abs + center[1]), (x_abs + center[0], -y_abs + center[1]),
+                    (-x_abs + center[0], y_abs + center[1]), (-x_abs + center[0], -y_abs + center[1])
+                })
         return answer
 
 
@@ -502,10 +520,12 @@ class Citizen:
         self._addToMap()
 
     def _addToMap(self) -> None:
-        insort(self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)], self)
+        insort(self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
+                   int(self.y % 16)], self)
 
     def _delFromOldPosition(self) -> None:
-        pos = self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][int(self.y % 16)]
+        pos = self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
+            int(self.y % 16)]
         pos.pop(bisect(pos, self) - 1)
 
     def __gt__(self, other) -> bool:

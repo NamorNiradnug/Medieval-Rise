@@ -3,7 +3,7 @@ from enum import Enum
 from threading import Event, Thread
 from types import FunctionType
 
-from PyQt5.QtCore import QPoint, QSize, Qt
+from PyQt5.QtCore import QPoint, QSize, Qt, QRect
 from PyQt5.QtGui import QCloseEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPixmap, QWheelEvent, QCursor
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
@@ -55,6 +55,9 @@ class Frame(QMainWindow):
         self.last_pos = self.cursor().pos()
         self.last_button = Qt.NoButton
         self.mode = Modes.Town
+        self.scrollAmount = 0
+        self.menu_mode = 1
+        self.menuAnimation = 0
 
         self.draw_thread = Interval(1 / 160, self.update)
         self.check_thread = Interval(1 / 40, self.mousePositionEvent)
@@ -77,17 +80,54 @@ class Frame(QMainWindow):
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         delta = event.pos() - self.last_pos
 
-        if self.last_button == Qt.RightButton:
+        if self.last_button == Qt.LeftButton and self.mode == Modes.TownRoadBuilder:
+            self.town.projecting_road.build()
+        elif self.last_button == Qt.RightButton:
             self.town.translate(delta)
 
         self.last_pos = event.pos()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
-            if self.mode == Modes.TownBuilder:
-                self.town.chosen_building.build()
-
-            if self.mode == Modes.TownRoadBuilder:
+            if self.mode == Modes.Town:
+                if Town.isPointInRect(event.pos(), (
+                        QPoint(0, self.height() * .8 + self.menuAnimation),
+                        QSize(self.height() / 15, self.height() / 15)
+                )):
+                    self.menu_mode = 1
+                elif Town.isPointInRect(event.pos(), (
+                        QPoint(0, self.height() * 13 / 15 + self.menuAnimation),
+                        QSize(self.height() / 15, self.height() / 15)
+                )):
+                    self.menu_mode = 2
+                elif Town.isPointInRect(event.pos(), (
+                        QPoint(0, self.height() * 14 / 15 + self.menuAnimation),
+                        QSize(self.height() / 15, self.height() / 15)
+                )):
+                    self.mode = Modes.Destroy
+                else:
+                    if self.menu_mode == 1:
+                        types = Town.BuildingTypes
+                    elif self.menu_mode == 2:
+                        types = Town.RoadTypes
+                    for i in range(len(types.sorted_names)):
+                        if Town.isPointInRect(event.pos(), (QPoint(
+                            self.height() * (3 * i + 1) / 15 - self.scrollAmount,
+                            self.height() * .8 + self.menuAnimation
+                        ), QSize(self.height() * .2, self.height() * .2))):
+                            self.mode = Modes(self.menu_mode)
+                            self.town.chosen_btype = i
+                            self.town.chosen_building = Town.ProjectedBuilding(
+                                self.town,
+                                Town.BuildingTypes.getByNumber(self.town.chosen_btype)
+                            )
+                            self.setCursor(transparentCursor())
+                            break
+            elif self.mode == Modes.TownBuilder:
+                if self.town.chosen_building.build():
+                    self.mode = Modes.Town
+                    self.setCursor(QCursor())
+            elif self.mode == Modes.TownRoadBuilder:
                 self.town.projecting_road.build()
 
         self.last_button = Qt.NoButton
@@ -95,31 +135,11 @@ class Frame(QMainWindow):
     def keyReleaseEvent(self, event: QKeyEvent) -> None:
         event_key = event.key()
 
-        if event_key == Qt.Key_B:
-            if self.mode == Modes.Town:
-                self.mode = Modes.TownBuilder
-                self.town.chosen_building = Town.ProjectedBuilding(
-                    self.town, Town.BuildingTypes.getByNumber(self.town.chosen_btype)
-                )
-                self.cursor().setPos(self.width() / 2, self.height() / 2)
-                self.setCursor(transparentCursor())
-
         if event_key == Qt.Key_R:
             if self.mode == Modes.Town:
                 self.mode = Modes.TownRoadBuilder
                 self.town.projecting_road = Town.ProjectingRoad(self.town)
-                self.cursor().setPos(self.width() / 2, self.height() / 2)
                 self.setCursor(transparentCursor())
-
-        if event_key == Qt.Key_Up:
-            if self.mode == Modes.TownBuilder:
-                self.town.chosen_btype = (self.town.chosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
-                self.town.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.town.chosen_btype))
-
-        if event_key == Qt.Key_Down:
-            if self.mode == Modes.TownBuilder:
-                self.town.chosen_btype = (self.town.chosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
-                self.town.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.town.chosen_btype))
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
@@ -133,18 +153,32 @@ class Frame(QMainWindow):
             if self.mode == Modes.TownBuilder:
                 self.town.chosen_building.destroy()
                 self.town.chosen_building = None
-                self.mode = Modes.Town
-                self.setCursor(QCursor())
 
             if self.mode == Modes.TownRoadBuilder:
                 self.town.projecting_road.destroy()
                 self.town.projecting_road = None
-                self.mode = Modes.Town
-                self.setCursor(QCursor())
+
+            self.mode = Modes.Town
+            self.setCursor(QCursor())
 
             if self.mode == Modes.Town:
                 # open pause menu
                 pass
+
+    def drawButton(self, painter, rect, tex):
+        if Town.isPointInRect(self.cursor().pos() - self.pos(), (rect.topLeft(), rect.size())):
+            if self.last_button == Qt.LeftButton:
+                painter.fillRect(rect, Qt.red)
+                painter.drawRect(rect)
+                # painter.drawImage(rect, pressed tex)
+            else:
+                painter.fillRect(rect, Qt.green)
+                painter.drawRect(rect)
+                # painter.drawImage(rect, hover tex)
+        else:
+            painter.fillRect(rect, Qt.blue)
+            painter.drawRect(rect)
+            # painter.drawImage(rect, tex)
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
@@ -161,20 +195,58 @@ class Frame(QMainWindow):
             
         self.town.draw(painter, self.size())
 
-        if self.mode == Modes.TownBuilder:
-            Town.BuildingTypes.getByNumber(self.town.chosen_btype).drawDefault(self.width() - 125, 250, painter)
+        if self.mode == Modes.Town and self.menuAnimation > 0:
+            self.menuAnimation -= 8
+        elif self.mode != Modes.Town and self.menuAnimation < self.height() * .2:
+            self.menuAnimation += 8
+        painter.fillRect(QRect(0, self.height() * .8 + self.menuAnimation, self.width(), self.height() * .2), Qt.gray)
+        if self.menu_mode == 1:
+            types = Town.BuildingTypes
+        elif self.menu_mode == 2:
+            types = Town.RoadTypes
+        for i in range(len(types.sorted_names)):
+            self.drawButton(painter, QRect(
+                self.height() * (3 * i + 1) / 15 - self.scrollAmount,
+                self.height() * .8 + self.menuAnimation,
+                self.height() * .2,
+                self.height() * .2
+            ), None)  # button)
+            types.getByNumber(i).drawDefault(
+                self.height() * (6 * i + 5) / 30 - self.scrollAmount,
+                self.height() * .9 + self.menuAnimation,
+                painter
+            )
+        self.drawButton(
+            painter,
+            QRect(0, self.height() * .8 + self.menuAnimation, self.height() / 15, self.height() / 15),
+            None  # build button
+        )
+        self.drawButton(
+            painter,
+            QRect(0, self.height() * 13 / 15 + self.menuAnimation, self.height() / 15, self.height() / 15),
+            None  # road button
+        )
+        self.drawButton(
+            painter,
+            QRect(0, self.height() * 14 / 15 + self.menuAnimation, self.height() / 15, self.height() / 15),
+            None  # destroy button
+        )
 
         painter.end()
 
     def mousePositionEvent(self) -> None:
         """Do something dependent on cursor position."""
-        
+
         cursor_pos = self.cursor().pos()
 
-        if self.last_button == Qt.NoButton \
-           and not Town.isPointInRect(cursor_pos, (QPoint(10, 10), self.maximumSize() - QSize(20, 20))):
-            delta = QPoint((cursor_pos.x() - self.maximumWidth() // 2) / 40,
-                           (cursor_pos.y() - self.maximumHeight() // 2) / 34)
+        if self.last_button == Qt.NoButton and not Town.isPointInRect(
+                cursor_pos,
+                (QPoint(10, 10), self.maximumSize() - QSize(20, 20))
+        ):
+            delta = QPoint(
+                (cursor_pos.x() - self.maximumWidth() // 2) / 40,
+                (cursor_pos.y() - self.maximumHeight() // 2) / 34
+            )
             self.town.translate(-delta)
 
 
