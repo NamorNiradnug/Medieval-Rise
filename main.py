@@ -77,7 +77,29 @@ class Frame(QMainWindow):
         self.last_button = event.button()
 
     def wheelEvent(self, event: QWheelEvent) -> None:
-        self.town.scaleByEvent(event)
+        if Town.isPointInRect(event.pos(), (QPoint(0, self.height() * .8), QSize(self.width(), self.height() * .2))):
+            if self.menu_mode == 1:
+                types = Town.BuildingTypes
+            elif self.menu_mode == 2:
+                types = Town.RoadTypes
+            delta = event.pixelDelta()
+            if True:  # delta is None:
+                delta = -event.angleDelta().y() / 2
+            else:
+                delta = -delta.x() / 2
+            max_scroll = (3 * len(types.sorted_names) + 1) / 15 * self.height() - self.width()
+            if Town.isPointInRect(event.pos(), (QPoint(self.height() / 15, self.height() * .8), QSize(
+                    self.width(),
+                    self.height() * .2
+            ))) and (delta > 0 and max_scroll > self.scrollAmount or delta < 0 and self.scrollAmount > 0):
+                self.scrollAmount += delta
+                if max_scroll < self.scrollAmount:
+                    self.scrollAmount = max_scroll
+                elif self.scrollAmount < 0:
+                    self.scrollAmount = 0
+
+        else:
+            self.town.scaleByEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         delta = event.pos() - self.last_pos
@@ -97,11 +119,13 @@ class Frame(QMainWindow):
                         QSize(self.height() / 15, self.height() / 15)
                 )):
                     self.menu_mode = 1
+                    self.scrollAmount = 0
                 elif Town.isPointInRect(event.pos(), (
                         QPoint(0, self.height() * 13 / 15 + self.menuAnimation),
                         QSize(self.height() / 15, self.height() / 15)
                 )):
                     self.menu_mode = 2
+                    self.scrollAmount = 0
                 elif Town.isPointInRect(event.pos(), (
                         QPoint(0, self.height() * 14 / 15 + self.menuAnimation),
                         QSize(self.height() / 15, self.height() / 15)
