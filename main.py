@@ -33,6 +33,7 @@ class Modes(Enum):
     Town = 0
     TownBuilder = 1
     TownRoadBuilder = 2
+    Destroy = 3
 
 
 def transparentCursor() -> QCursor:
@@ -58,6 +59,7 @@ class Frame(QMainWindow):
         self.scrollAmount = 0
         self.menu_mode = 1
         self.menuAnimation = 0
+        self.destroy_pos = None
 
         self.draw_thread = Interval(1 / 160, self.update)
         self.check_thread = Interval(1 / 40, self.mousePositionEvent)
@@ -105,6 +107,7 @@ class Frame(QMainWindow):
                         QSize(self.height() / 15, self.height() / 15)
                 )):
                     self.mode = Modes.Destroy
+                    self.setCursor(transparentCursor())
                 else:
                     if self.menu_mode == 1:
                         types = Town.BuildingTypes
@@ -112,8 +115,8 @@ class Frame(QMainWindow):
                         types = Town.RoadTypes
                     for i in range(len(types.sorted_names)):
                         if Town.isPointInRect(event.pos(), (QPoint(
-                            self.height() * (3 * i + 1) / 15 - self.scrollAmount,
-                            self.height() * .8 + self.menuAnimation
+                                self.height() * (3 * i + 1) / 15 - self.scrollAmount,
+                                self.height() * .8 + self.menuAnimation
                         ), QSize(self.height() * .2, self.height() * .2))):
                             self.mode = Modes(self.menu_mode)
                             self.town.chosen_btype = i
@@ -129,6 +132,12 @@ class Frame(QMainWindow):
                     self.setCursor(QCursor())
             elif self.mode == Modes.TownRoadBuilder:
                 self.town.projecting_road.build()
+            elif self.mode == Modes.Destroy:
+                build = self.town.getBuilding(int(self.destroy_pos.x()), int(self.destroy_pos.y()))
+                if build:
+                    build.destroy()
+                    self.mode = Modes.Town
+                    self.setCursor(QCursor())
 
         self.last_button = Qt.NoButton
 
@@ -150,20 +159,17 @@ class Frame(QMainWindow):
                 self.town.chosen_building.turn(-90)
 
         if event_key == Qt.Key_Escape:
-            if self.mode == Modes.TownBuilder:
+            if self.mode == Modes.Town:
+                pass  # open pause menu
+            elif self.mode == Modes.TownBuilder:
                 self.town.chosen_building.destroy()
                 self.town.chosen_building = None
-
-            if self.mode == Modes.TownRoadBuilder:
+            elif self.mode == Modes.TownRoadBuilder:
                 self.town.projecting_road.destroy()
                 self.town.projecting_road = None
 
             self.mode = Modes.Town
             self.setCursor(QCursor())
-
-            if self.mode == Modes.Town:
-                # open pause menu
-                pass
 
     def drawButton(self, painter, rect, tex):
         if Town.isPointInRect(self.cursor().pos() - self.pos(), (rect.topLeft(), rect.size())):
@@ -183,17 +189,20 @@ class Frame(QMainWindow):
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
 
-        cursor_pos = (
-           self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
-            QPoint(self.town.cam_x, self.town.cam_y)
-        
+        cursor_pos = (self.cursor().pos() - QPoint(self.width(), self.height()) / 2) \
+                     * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
+
         if self.mode == Modes.TownBuilder:
             self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
-
-        if self.mode == Modes.TownRoadBuilder:
+        elif self.mode == Modes.TownRoadBuilder:
             self.town.projecting_road.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
-            
+
         self.town.draw(painter, self.size())
+
+        if self.mode == Modes.Destroy:
+            self.destroy_pos = (Town.isometric(cursor_pos.x(), cursor_pos.y()))
+            painter.fillRect(QRect(self.cursor().pos() - self.pos() - QPoint(60, 60) / 2, QSize(60, 60)), Qt.red)
+            # painter.drawImage(QRect(self.cursor().pos() - self.pos() - icon.bottomRight() / 2, icon.size()), icon)
 
         if self.mode == Modes.Town and self.menuAnimation > 0:
             self.menuAnimation -= 8
