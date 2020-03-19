@@ -272,6 +272,9 @@ class Town:
         self.cam_z = 1.0  # |
         self.scale = 1.0
 
+        self.chosen_building = None
+        self.chosen_btype = 0
+
         self.buildings = []
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]

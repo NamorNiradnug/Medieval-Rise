@@ -53,8 +53,6 @@ class Frame(QMainWindow):
 
         self.last_pos = self.cursor().pos()
         self.last_button = Qt.NoButton
-        self.chosen_building = None
-        self.chosen_btype = 0
         self.mode = Modes.Town
 
         self.draw_thread = Interval(1 / 160, self.update)
@@ -86,7 +84,7 @@ class Frame(QMainWindow):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
             if self.mode == Modes.TownBuilder:
-                self.chosen_building.build()
+                self.town.chosen_building.build()
 
         self.last_button = Qt.NoButton
 
@@ -96,34 +94,34 @@ class Frame(QMainWindow):
         if event_key == Qt.Key_B:
             if self.mode == Modes.Town:
                 self.mode = Modes.TownBuilder
-                self.chosen_building = Town.ProjectedBuilding(
-                    self.town, Town.BuildingTypes.getByNumber(self.chosen_btype)
+                self.town.chosen_building = Town.ProjectedBuilding(
+                    self.town, Town.BuildingTypes.getByNumber(self.town.chosen_btype)
                 )
                 self.cursor().setPos(self.width() / 2, self.height() / 2)
                 self.setCursor(transparentCursor())
 
         if event_key == Qt.Key_Up:
             if self.mode == Modes.TownBuilder:
-                self.chosen_btype = (self.chosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
-                self.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.chosen_btype))
+                self.town.chosen_btype = (self.town.chosen_btype + 1) % len(Town.BuildingTypes.sorted_names)
+                self.town.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.town.chosen_btype))
 
         if event_key == Qt.Key_Down:
             if self.mode == Modes.TownBuilder:
-                self.chosen_btype = (self.chosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
-                self.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.chosen_btype))
+                self.town.chosen_btype = (self.town.chosen_btype - 1) % len(Town.BuildingTypes.sorted_names)
+                self.town.chosen_building.setBuildingType(Town.BuildingTypes.getByNumber(self.town.chosen_btype))
 
         if event_key == Qt.Key_Right:
             if self.mode == Modes.TownBuilder:
-                self.chosen_building.turn(90)
+                self.town.chosen_building.turn(90)
 
         if event_key == Qt.Key_Left:
             if self.mode == Modes.TownBuilder:
-                self.chosen_building.turn(-90)
+                self.town.chosen_building.turn(-90)
 
         if event_key == Qt.Key_Escape:
             if self.mode == Modes.TownBuilder:
-                self.chosen_building.destroy()
-                self.chosen_building = None
+                self.town.chosen_building.destroy()
+                self.town.chosen_building = None
                 self.mode = Modes.Town
                 self.setCursor(QCursor())
 
@@ -138,12 +136,12 @@ class Frame(QMainWindow):
             cursor_pos = (
                 self.cursor().pos() - QPoint(self.width(), self.height()) / 2) * self.town.cam_z +\
                 QPoint(self.town.cam_x, self.town.cam_y)
-            self.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()), self.size())
+            self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()), self.size())
 
         self.town.draw(painter, self.size())
 
         if self.mode == Modes.TownBuilder:
-            Town.BuildingTypes.getByNumber(self.chosen_btype).drawDefault(self.width() - 125, 250, painter)
+            Town.BuildingTypes.getByNumber(self.town.chosen_btype).drawDefault(self.width() - 125, 250, painter)
 
         painter.end()
 
