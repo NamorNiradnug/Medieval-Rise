@@ -275,7 +275,7 @@ class RoadTypesManager:
     sorted_names = sorted(road_types)
 
     def __getattr__(self, item: str):
-        if item not in self.building_types:
+        if item not in self.road_types:
             raise AttributeError(f'Building type "{item}" does not exists.')
 
         return self.road_types[item]
