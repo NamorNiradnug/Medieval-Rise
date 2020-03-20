@@ -243,7 +243,7 @@ class ProjectedBuilding:
         coords = isometric(town.cam_x, town.cam_y)
         self.x = round(coords.x())
         self.y = round(coords.y())
-        self.town.setBuildingMaskForGroup(self.group())
+        self.town.setBuildingMaskForGroup(self)
 
     def _addNewBlocks(self):
         for x in range(len(self.blocks)):
@@ -251,6 +251,16 @@ class ProjectedBuilding:
                 for z in range(len(self.blocks[x][y])):
                     if self.town.isBlockEmpty(x + self.x, y + self.y, z):
                         self.town.addBlock(x + self.x, y + self.y, z, self)
+
+    def allOnGreen(self) -> bool:
+        for x in range(len(self.blocks)):
+            x += self.x
+            for y in range(len(self.blocks[0])):
+                y += self.y
+                if self.town.chunks[x // 16][y // 16].masks[x % 16][y % 16] != Masks.green and \
+                     self.getBlock(x, y, 0) is not None:
+                     return False
+        return True
 
     def addToMap(self, iso: QPointF) -> None:
         for x in range(len(self.blocks)):
@@ -295,7 +305,7 @@ class ProjectedBuilding:
         """Build projecting building."""
 
         if self.town.isBlocksEmpty(self.x, self.y, self.blocks, False) and self.doorCheck() and \
-                self.town.isNearBuildingWithGroup(self.group(), self.center()):
+                self.allOnGreen():
             self._delOldBlocks()
             Building(
                 self.x,
@@ -307,7 +317,7 @@ class ProjectedBuilding:
                 self._btype_variant
             )
             self.generateVariants()
-            self.town.setBuildingMaskForGroup(self.group())
+            self.town.setBuildingMaskForGroup(self)
             return True
         return False
 
@@ -437,6 +447,17 @@ class Town:
                 return True
         return False
 
+    def getBlock(self, x: int, y: int, z: int = 0) -> Tuple[Block, int, int, int, str]:
+        """Block data on position x, y, z."""
+
+        building = self.getBuilding(x, y, z)
+        if building is None:
+            return
+        block = building.getBlock(x, y, z)
+        if block[0] is None:
+            return None
+        return block[0], block[1], x, y, block[2]
+
     def getBuilding(self, x: int, y: int, z: int = 0) -> Building:
         """Building on position x, y, z."""
 
@@ -444,6 +465,8 @@ class Town:
             return self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z]
 
     def getRoad(self, x: int, y: int) -> Road:
+        """Road on position x, y."""
+
         if 0 <= x <= 255 and 0 <= y <= 255:
             return self.chunks[x // 16][y // 16].roads[x % 16][y % 16]
 
@@ -461,27 +484,31 @@ class Town:
             self.cam_z += delta
             self.scale = 1 / self.cam_z
 
-    def setBuildingMaskForGroup(self, group: str = None) -> None:
-        """Add green front light on places building with changed group."""
+    def setBuildingMaskForGroup(self, project: ProjectedBuilding = None) -> None:
+        """Add green front light on places where building could be builded."""
 
         for chunks in self.chunks:
             for chunk in chunks:
                 chunk.masks = tuple([None] * 16 for _ in range(16))
 
-        if group is None:
+        if project is None:
             return
 
         is_group_exist = False
 
-        radius = BuildingGroups.distances[group]
+        radius = BuildingGroups.distances[project.group()] + max(len(project.blocks), len(project.blocks[0]))
         for building in self.buildings:
-            if building.building_type.group == group:
+            if building.building_type.group == project.group():
                 is_group_exist = True
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
                         if self.getBuilding(i, j) is not None:
                             for x, y in self.manhattanCircle((i, j), radius):
-                                self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
+                                if all((self.getBlock(xx, yy) is None or
+                                            not (x, y) in self.getBlock(xx, yy)[0].placesThatMustBeEmpty(*self.getBlock(xx, yy)[1:]))
+                                                for xx, yy in ((x, y - 1), (x, y + 1), (x + 1, y), (x - 1, y))) and \
+                                    self.getRoad(x, y) is None:
+                                        self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
 
         if not is_group_exist:
             for chunks in self.chunks:
@@ -491,6 +518,8 @@ class Town:
     # TODO saving
 
     def tick(self, screen: QSize) -> None:
+        """Game tick."""
+
         for chunks in self.chunks:
             for chunk in chunks:
                 if self._isChunkVisible(chunk, screen):
@@ -545,6 +574,8 @@ class Citizen:
                           (self.x + self.y) * ISOMETRIC_HEIGHT1 - 53 - y, getImage("human"))
 
     def step(self):
+        """Citizens walks!"""
+
         self._delFromOldPosition()
         self.x += randint(0, 1) * .2
         self.y += randint(0, 1) * .2
