@@ -39,6 +39,7 @@ class Modes(Enum):
     TownRoadBuilder = 2
     Destroy = 3
     Instructions = 4
+    Pause = 5
 
 
 def transparentCursor() -> QCursor:
@@ -95,7 +96,7 @@ class Frame(QMainWindow):
                 self.last_mode = Modes.Town
             else:
                 self.last_mode = self.mode
-        elif mode != Modes.Town:
+        elif mode not in (Modes.Town, Modes.Pause):
             self.setCursor(transparentCursor())
             if mode == Modes.TownBuilder:
                 self.town.chosen_building = Town.ProjectedBuilding(
@@ -191,6 +192,17 @@ class Frame(QMainWindow):
                 if build:
                     build.destroy()
                     self.setMode(Modes.Town)
+            elif self.mode == Modes.Pause:
+                if Town.isPointInRect(event.pos(), (
+                        QPoint(self.width() * .41, self.height() * .4),
+                        QSize(self.width() * .18, self.height() * .05 + 4)
+                )):
+                    self.setMode(Modes.Town)
+                elif Town.isPointInRect(event.pos(), (
+                        QPoint(self.width() * .41, self.height() * .5),
+                        QSize(self.width() * .18, self.height() * .05 + 4)
+                )):
+                    self.close()
 
         self.last_button = Qt.NoButton
 
@@ -210,7 +222,7 @@ class Frame(QMainWindow):
 
         if event_key == Qt.Key_Escape:
             if self.mode == Modes.Town:
-                pass  # TODO: open pause menu
+                self.setMode(Modes.Pause)
             elif self.mode == Modes.Instructions:
                 self.setMode(Modes.Instructions)
             else:
@@ -338,7 +350,7 @@ class Frame(QMainWindow):
             self.destroy_pos = (Town.isometric(cursor_pos.x(), cursor_pos.y()))
             painter.drawImage(QRect(cursor - QPoint(48, 48), QSize(96, 96)), getImage("destroy"))
         self.drawMenu(painter, QRect(0, self.height() * .8 + self.menuAnimation, self.width(), self.height() * .2 + 1))
-        if self.mode == Modes.Town or self.mode == Modes.Instructions and self.last_mode == Modes.Town:
+        if self.mode in (Modes.Town, Modes.Pause) or self.mode == Modes.Instructions and self.last_mode == Modes.Town:
             if self.menuAnimation > 0:
                 self.menuAnimation -= 8
         else:
@@ -374,28 +386,74 @@ class Frame(QMainWindow):
             QPixmap.fromImage(getImage("destroy"))
         )
 
-        if self.mode == Modes.Instructions:
+        if self.mode in (Modes.Instructions, Modes.Pause):
             painter.fillRect(self.rect(), QColor(0, 0, 0, 128))  # darken everything else
-            self.drawMenu(painter, QRect(self.width() * .4, self.height() * .34, self.width() * .2, self.height() * .32))
+            self.drawMenu(
+                painter,
+                QRect(self.width() * .4, self.height() * .34, self.width() * .2, self.height() * .32)
+            )
 
-            painter.setPen(Qt.black)                              # \ for drawing text
-            painter.setFont(QFont("arial", self.width() // 100))  # /
+            if self.mode == Modes.Instructions:
+                painter.setPen(Qt.black)                              # \ for drawing text
+                painter.setFont(QFont("arial", self.width() // 100))  # /
 
-            r = self.drawKey(painter, cursor, "I", self.width() * .41, self.height() * .35)
-            painter.drawText(r.right() + 10, self.height() * .38 + 2, " открывает/закрывает это меню.")
+                painter.setPen(Qt.black)                              # \ for drawing text
+                painter.setFont(QFont("arial", self.width() // 100))  # /
 
-            r = self.drawKey(painter, cursor, "ESC", self.width() * .41, self.height() * .40 + 4)
-            painter.drawText(r.right() + 10, self.height() * .43 + 6, " отменяет действие.")
+                r = self.drawKey(painter, cursor, "I", self.width() * .41, self.height() * .35)
+                painter.drawText(r.right() + 10, self.height() * .38 + 2, " открывает/закрывает это меню.")
 
-            r = self.drawKey(painter, cursor, "←", self.width() * .41, self.height() * .45 + 8)
-            r = self.drawKey(painter, cursor, "→", self.width() * .41 + r.width(), self.height() * .45 + 8)
-            painter.drawText(r.right() + 10, self.height() * .48 + 10, " поворачивают здания.")
+                r = self.drawKey(painter, cursor, "ESC", self.width() * .41, self.height() * .40 + 4)
+                painter.drawText(r.right() + 10, self.height() * .43 + 6, " отменяет действие.")
 
-            painter.drawText(self.width() * .41, self.height() * .53 + 12, "ЛКМ строит или сносит.")
-            painter.drawText(self.width() * .41, self.height() * .555 + 12, "ПКМ перетаскивает карту.")
-            painter.drawText(self.width() * .41, self.height() * .58 + 12, "Колёсико изменяет масштаб.")
-            painter.drawText(self.width() * .41, self.height() * .605 + 12, "Используйте меню, чтобы строить")
-            painter.drawText(self.width() * .41, self.height() * .62 + 12, "здания и дороги или сносить их.")
+                r = self.drawKey(painter, cursor, "←", self.width() * .41, self.height() * .45 + 8)
+                r = self.drawKey(painter, cursor, "→", self.width() * .41 + r.width(), self.height() * .45 + 8)
+                painter.drawText(r.right() + 10, self.height() * .48 + 10, " поворачивают здания.")
+
+                painter.drawText(self.width() * .41, self.height() * .53 + 12, "ЛКМ строит или сносит.")
+                painter.drawText(self.width() * .41, self.height() * .555 + 12, "ПКМ перетаскивает карту.")
+                painter.drawText(self.width() * .41, self.height() * .58 + 12, "Колёсико изменяет масштаб.")
+                painter.drawText(self.width() * .41, self.height() * .605 + 12, "Используйте меню, чтобы строить")
+                painter.drawText(self.width() * .41, self.height() * .62 + 12, "здания и дороги или сносить их.")
+            else:
+                pix = QPixmap(self.width() * .18 - 6, self.height() * .05 - 6)
+                pix.fill(Qt.transparent)
+                pain = QPainter(pix)
+                pain.setPen(Qt.black)
+                pain.setFont(QFont("arial", self.width() // 100))
+                pain.drawText(
+                    self.width() * .09 - painter.fontMetrics().width("Продолжить") / 2 - 3,
+                    self.height() * .025 + self.width() / 200 - 3,
+                    "Продолжить"
+                )
+                pain.end()
+                self.drawButton(
+                    painter,
+                    cursor,
+                    QRect(self.width() * .41, self.height() * .4, self.width() * .18, self.height() * .05 + 4),
+                    pix,
+                    resize=False
+                )
+
+                pix = QPixmap(self.width() * .18 - 6, self.height() * .05 - 6)
+                pix.fill(Qt.transparent)
+                pain = QPainter(pix)
+                pain.setPen(Qt.black)
+                pain.setFont(QFont("arial", self.width() // 100))
+                pain.drawText(
+                    self.width() * .09 - painter.fontMetrics().width("Выйти") / 2 - 3,
+                    self.height() * .025 + self.width() / 200 - 3,
+                    "Выйти"
+                )
+                pain.end()
+                self.drawButton(
+                    painter,
+                    cursor,
+                    QRect(self.width() * .41, self.height() * .5, self.width() * .18, self.height() * .05 + 4),
+                    pix,
+                    resize=False
+                )
+
 
 
 if __name__ == "__main__":
