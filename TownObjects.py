@@ -2,7 +2,7 @@ from json import load
 from random import choice
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPixmap
 
 from resources_manager import getImage, getJSON
 
@@ -212,8 +212,16 @@ class BuildingType:
             )
         )
 
-    def drawDefault(self, fx: int, fy: int, painter: QPainter) -> None:
+    def drawDefault(self, size: QSize) -> QPixmap:
         blocks = self.blocks[self.default_variant]
+        pix = QPixmap(size)
+        painter = QPainter(pix)
+        image_height = 5 * ISOMETRIC_HEIGHT2 + 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_HEIGHT1
+        image_width = 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_WIDTH
+        scale = min(size.width() / image_width, size.height() / image_height)
+        painter.scale(scale, scale)
+        fx = size.width() / 2
+        fy = size.height() - max(len(blocks), len(blocks[0])) * 2 * ISOMETRIC_HEIGHT1
         for block_x in range(len(blocks)):
             for block_y in range(len(blocks[block_x])):
                 for z in range(len(blocks[block_x][block_y])):
