@@ -38,26 +38,30 @@ class Chunk:
         self.is_empty = True
         self.blocks = tuple(tuple([None] * 5 for _ in range(16)) for _ in range(16))
         self.grounds = tuple([Grounds.grass for _ in range(16)] for _ in range(16))
-        self.with_mask = set()
+        self.masks = tuple([None] * 16 for _ in range(16))
         self.roads = tuple([None for _ in range(16)] for _ in range(16))
         self.citizens = tuple(tuple([] for _ in range(16)) for _ in range(16))
 
-    def draw(self, painter: QPainter, x: int, y: int) -> None:
+    def draw(self, painter: QPainter, x: int, y: int, projecting_opacity: float) -> None:
+        if not (0 <= projecting_opacity <= 1):
+            raise AttributeError("Opacity must be between 0 and 1.")
+
         """Draw chunk."""
         for i in range(16):
             for j in range(16):
-
-                # Draw ground
-                ground_variant = "default"
-                if (i, j) in self.with_mask:
-                    ground_variant = "green"
 
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                         ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
 
                 # Draw road
                 if self.roads[i][j] is not None:
+                    if type(self.roads[i][j]) == ProjectedBuilding:
+                        painter.setOpacity(projecting_opacity)
                     self.roads[i][j].draw(painter, x, y)
+                    painter.setOpacity(1)
+
+                if self.masks[i][j] is not None:
+                    
 
                 # Draw citizens
                 for citizen in self.citizens[i][j]:
@@ -68,7 +72,7 @@ class Chunk:
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
-                            painter.setOpacity(.8)
+                            painter.setOpacity(projecting_opacity)
                         block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
                         block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                    ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
@@ -178,12 +182,7 @@ class ProjectingRoad:
         del self
 
     def draw(self, painter: QPainter, x: int, y: int) -> None:
-        painter.save()
-        painter.setOpacity(.8)
-
         Road.draw(self, painter, x, y)
-
-        painter.restore()
 
 
 class Building(TownObject):
@@ -203,7 +202,6 @@ class Building(TownObject):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
                     if self.blocks[block_x][block_y][block_z] is not None:
-                        print(f'add  block {block_x, block_y, block_z}')
                         town.addBlock(x + block_x, y + block_y, block_z, self)
 
     def destroy(self) -> None:
@@ -370,8 +368,11 @@ class Town:
         if 0 <= x <= 255 and 0 <= y <= 255:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
-    def draw(self, painter: QPainter, size: QSize) -> None:
+    def draw(self, painter: QPainter, size: QSize, projecting_opacity: float) -> None:
         """Draw town on screen with changed size."""
+
+        if not (0 <= projecting_opacity <= 1):
+            raise AttributeError(f"Opacity must be between 0 and 1, not {projecting_opacity}.")
 
         x = int(self.cam_x - (self.cam_z * size.width()) / 2)
         y = int(self.cam_y - (self.cam_z * size.height()) / 2)

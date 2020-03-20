@@ -98,7 +98,7 @@ class Ground:
     def __init__(self, variants: Dict[str, str]):
         self.variants = {item: getImage(variants[item]) for item in variants}
 
-    def draw(self, x: float, y: float,  variant: str, painter: QPainter) -> None:
+    def draw(self, x: float, y: float, variant: str, painter: QPainter) -> None:
         painter.drawImage(x - ISOMETRIC_WIDTH, y, self.variants[variant])
 
 
@@ -285,3 +285,22 @@ class RoadTypesManager:
 
 
 RoadTypes = RoadTypesManager()
+
+
+class Mask:
+    """Mask for ground."""
+    
+    def __init__(self, name: str):
+        self.image = getImage(name)
+
+    def draw(self, x: float, y: float, painter: QPainter) -> None:
+        painter.drawImage(x - ISOMETRIC_WIDTH, y,  self.image)
+
+
+class MasksManager:
+    """Store all Masks."""
+
+    self.masks = {'green': Mask('green')}
+
+    def __getattr__(self, item: str) -> Mask:
+        return self.masks[item]
