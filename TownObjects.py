@@ -31,10 +31,10 @@ class Block:
         self.variants = {
             variant: {
                 angle * 90: (
-                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(4 - angle) % 4], 'NULL')}_left", True),
-                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(5 - angle) % 4], 'NULL')}_right", True),
-                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(6 - angle) % 4], 'NULL')}_right_back", True),
-                    getImage(f"{BLOCKS_DATA[name][variant].get(sides[(7 - angle) % 4], 'NULL')}_left_back", True)
+                    getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(4 - angle) % 4], 'NULL')}_left", True),
+                    getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(5 - angle) % 4], 'NULL')}_right", True),
+                    getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(6 - angle) % 4], 'NULL')}_right_back", True),
+                    getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(7 - angle) % 4], 'NULL')}_left_back", True)
                 )
                 for angle in range(4)
             }

@@ -65,8 +65,8 @@ class Chunk:
                 # Draw mask
                 painter.setOpacity(builded_opacity)
                 if self.masks[i][j] is not None:
-                   self.masks[i][j].draw(x, y, painter) 
-
+                   self.masks[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                                          ISOMETRIC_HEIGHT1 - y, painter)
                 # Draw citizens
                 painter.setOpacity(1)
                 for citizen in self.citizens[i][j]:
@@ -466,7 +466,7 @@ class Town:
 
         for chunks in self.chunks:
             for chunk in chunks:
-                chunk.with_mask = set()
+                chunk.masks = tuple([None] * 16 for _ in range(16))
 
         if group is None:
             return
@@ -486,7 +486,7 @@ class Town:
         if not is_group_exist:
             for chunks in self.chunks:
                 for chunk in chunks:
-                    chunk.with_mask = {(i, j) for j in range(16) for i in range(16)}
+                    chunk.masks = tuple([[Masks.green] * 16 for _ in range(16)])
 
     # TODO saving
 
