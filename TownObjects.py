@@ -232,6 +232,8 @@ class BuildingType:
                             (block_x + block_y) * ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 + fy,
                             0, painter, self.default_blocks[block_x][block_y][z]
                         )
+        painter.end()
+        return pix
 
 
 class BuildingTypeManager:
