@@ -349,25 +349,12 @@ class Frame(QMainWindow):
         elif self.menu_mode == 2:
             types = Town.RoadTypes
         for i in range(len(types.sorted_names)):
-            pix = QPixmap(self.height() * .2, self.height() * .2)
-            pix.fill(Qt.transparent)
-            pain = QPainter(pix)
-            pain.save()
-            pain.translate(self.height() * .05, self.height() * .05)
-            pain.scale(.5, .5)
-            types.getByNumber(i).drawDefault(
-                self.height() * .1,
-                self.height() * .1,
-                pain
-            )
-            pain.restore()
-            pain.end()
             self.drawButton(painter, cursor, QRect(
                 self.height() * (3 * i + 1) / 15 - self.scrollAmount - 4,
                 self.height() * .8 + self.menuAnimation,
                 self.height() * .2,
                 self.height() * .2
-            ), pix)
+            ), types.getByNumber(i).drawDefault(QSize(self.height() * .2 - 6, self.height() * .2 - 10)))
         self.drawButton(
             painter,
             cursor,
