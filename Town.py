@@ -7,7 +7,7 @@ from PyQt5.QtGui import QPainter
 
 from TownObjects import (ISOMETRIC_HEIGHT1, ISOMETRIC_HEIGHT2, ISOMETRIC_WIDTH,
                          Block, BuildingType, BuildingTypes, Grounds, BuildingGroups, getImage,
-                         RoadType, RoadTypes)
+                         RoadType, RoadTypes, Masks)
 
 
 def isometric(x: float, y: float) -> QPointF:
@@ -481,7 +481,7 @@ class Town:
                     for j in range(building.y, building.y + len(building.blocks[0])):
                         if self.getBuilding(i, j) is not None:
                             for x, y in self.manhattanCircle((i, j), radius):
-                                self.chunks[x // 16][y // 16].with_mask.add((x % 16, y % 16))
+                                self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
 
         if not is_group_exist:
             for chunks in self.chunks:

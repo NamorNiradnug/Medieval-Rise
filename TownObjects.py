@@ -300,7 +300,10 @@ class Mask:
 class MasksManager:
     """Store all Masks."""
 
-    masks = {''}
+    masks = {item: Mask(item) for item in ("green",)}
 
     def __getattr__(self, item: str) -> Mask:
         return self.masks[item]
+
+
+Masks = MasksManager()
