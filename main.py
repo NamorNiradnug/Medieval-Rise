@@ -369,7 +369,7 @@ class Frame(QMainWindow):
 
         if self.mode == Modes.Instructions:
             painter.fillRect(self.rect(), QColor(0, 0, 0, 128))  # darken everything else
-            self.drawMenu(painter, QRect(self.width() * .4, self.height() * .35, self.width() * .2, self.height() * .3))
+            self.drawMenu(painter, QRect(self.width() * .4, self.height() * .34, self.width() * .2, self.height() * .32))
 
             painter.setPen(Qt.black)                              # \ for drawing text
             painter.setFont(QFont("arial", self.width() // 100))  # /
@@ -386,12 +386,12 @@ class Frame(QMainWindow):
             self.drawButton(
                 painter,
                 cursor,
-                QRect(self.width() * .41, self.height() * .36, self.height() / 20, self.height() / 20 + 4),
+                QRect(self.width() * .41, self.height() * .35, self.height() / 20, self.height() / 20 + 4),
                 pix,
                 resize=False
             )
             painter.drawText(
-                self.width() * .41 + self.height() / 20, self.height() * .39, " чтобы открыть/закрыть это меню."
+                self.width() * .41 + self.height() / 20, self.height() * .38, " открывает/закрывает это меню."
             )
 
             pain.setCompositionMode(pain.CompositionMode_Clear)
@@ -401,12 +401,12 @@ class Frame(QMainWindow):
             self.drawButton(
                 painter,
                 cursor,
-                QRect(self.width() * .41, self.height() * .41 + 4, self.height() / 14, self.height() / 20 + 4),
+                QRect(self.width() * .41, self.height() * .40 + 4, self.height() / 14, self.height() / 20 + 4),
                 pix,
                 resize=False
             )
             painter.drawText(
-                self.width() * .41 + self.height() / 14, self.height() * .44 + 4, " чтобы отменить действие."
+                self.width() * .41 + self.height() / 14, self.height() * .43 + 4, " отменят действие."
             )
 
             pain.setCompositionMode(pain.CompositionMode_Clear)
@@ -416,7 +416,7 @@ class Frame(QMainWindow):
             self.drawButton(
                 painter,
                 cursor,
-                QRect(self.width() * .41, self.height() * .46 + 8, self.height() / 20, self.height() / 20 + 4),
+                QRect(self.width() * .41, self.height() * .45 + 8, self.height() / 20, self.height() / 20 + 4),
                 pix,
                 resize=False
             )
@@ -426,22 +426,37 @@ class Frame(QMainWindow):
             pain.drawText(self.height() / 100, self.height() / 31, "→")
             self.drawButton(painter, cursor, QRect(
                 self.width() * .41 + self.height() / 20,
-                self.height() * .46 + 8,
+                self.height() * .45 + 8,
                 self.height() / 20,
                 self.height() / 20 + 4
             ), pix, resize=False)
             painter.drawText(
-                self.width() * .41 + self.height() / 10, self.height() * .49 + 8, " чтобы поворачивать здания."
+                self.width() * .41 + self.height() / 10, self.height() * .48 + 8, " поворачивает здания."
             )
             painter.drawText(
                 self.width() * .41,
-                self.height() * .54 + 12,
+                self.height() * .52 + 12,
+                "ЛКМ строит или сносит."
+            )
+            painter.drawText(
+                self.width() * .41,
+                self.height() * .55 + 12,
+                "ПКМ перетаскивает карту."
+            )
+            painter.drawText(
+                self.width() * .41,
+                self.height() * .58 + 12,
+                "Колёсико изменяет масштаб."
+            )
+            painter.drawText(
+                self.width() * .41,
+                self.height() * .61 + 12,
                 "Используйте меню, чтобы строить"
             )
             painter.drawText(
                 self.width() * .41,
-                self.height() * .56 + 12,
-                "здания и дороги и разрушать их."
+                self.height() * .625 + 12,
+                "здания и дороги или сносить их."
             )
 
             pain.end()
