@@ -42,33 +42,39 @@ class Chunk:
         self.roads = tuple([None for _ in range(16)] for _ in range(16))
         self.citizens = tuple(tuple([] for _ in range(16)) for _ in range(16))
 
-    def draw(self, painter: QPainter, x: int, y: int, projecting_opacity: float) -> None:
+    def draw(self, painter: QPainter, x: int, y: int, projecting_opacity: float, builded_opacity: float = 1) -> None:
+        """Draw chunk."""
+
         if not (0 <= projecting_opacity <= 1):
             raise AttributeError("Opacity must be between 0 and 1.")
 
-        """Draw chunk."""
         for i in range(16):
             for j in range(16):
 
+                painter.setOpacity(1)
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        ISOMETRIC_HEIGHT1 - y, 'default', painter)
+                                        ISOMETRIC_HEIGHT1 - y, painter)
 
                 # Draw road
+                painter.setOpacity(1)
                 if self.roads[i][j] is not None:
-                    if type(self.roads[i][j]) == ProjectedBuilding:
+                    if type(self.roads[i][j]) == ProjectedRoad:
                         painter.setOpacity(projecting_opacity)
                     self.roads[i][j].draw(painter, x, y)
-                    painter.setOpacity(1)
 
+                # Draw mask
+                painter.setOpacity(builded_opacity)
                 if self.masks[i][j] is not None:
                    self.masks[i][j].draw(x, y, painter) 
 
                 # Draw citizens
+                painter.setOpacity(1)
                 for citizen in self.citizens[i][j]:
                     citizen.draw(painter, x, y)
 
                 # Draw blocks
                 for z in range(5):
+                    painter.setOpacity(builded_opacity)
                     building = self.blocks[i][j][z]
                     if building is not None:
                         if type(building) == ProjectedBuilding:
@@ -76,7 +82,6 @@ class Chunk:
                         block, angle, variant = building.getBlock(i + self.x, j + self.y, z)
                         block.draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                    ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 - y, angle, painter, variant)
-                        painter.setOpacity(1)
 
 
 class TownObjectType:
@@ -147,7 +152,7 @@ class Road(TownObject):
                               (self.x + self.y + 1) * ISOMETRIC_HEIGHT1 - y, textures['right-down'])
 
 
-class ProjectingRoad:
+class ProjectedRoad:
     def __init__(self, town: 'Town', road_type: RoadType = RoadTypes.road):
         self.town = town
         self.road_type = road_type
@@ -368,7 +373,7 @@ class Town:
         if 0 <= x <= 255 and 0 <= y <= 255:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
-    def draw(self, painter: QPainter, size: QSize, projecting_opacity: float) -> None:
+    def draw(self, painter: QPainter, size: QSize, projecting_opacity: float, builded_opacity: float = 1) -> None:
         """Draw town on screen with changed size."""
 
         if not (0 <= projecting_opacity <= 1):
@@ -382,7 +387,7 @@ class Town:
         for chunks in self.chunks:
             for chunk in chunks:
                 if self._isChunkVisible(chunk, size):
-                    chunk.draw(painter, x, y, projecting_opacity)
+                    chunk.draw(painter, x, y, projecting_opacity, builded_opacity)
 
         painter.restore()
 
@@ -525,11 +530,11 @@ class Citizen:
 
     def _addToMap(self) -> None:
         insort(self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
-                   int(self.y % 16)], self)
+                    int(self.y % 16)], self)
 
     def _delFromOldPosition(self) -> None:
         pos = self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
-            int(self.y % 16)]
+                    int(self.y % 16)]
         pos.pop(bisect(pos, self) - 1)
 
     def __gt__(self, other) -> bool:

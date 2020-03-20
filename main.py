@@ -53,6 +53,7 @@ class Frame(QMainWindow):
     def __init__(self, town: Town.Town):
         super().__init__()
         self.setMouseTracking(True)
+        self.setWindowTitle("Medieval Rise")
         self.setWindowIcon(QIcon(QPixmap.fromImage(getImage("build"))))
 
         self.town = town
@@ -99,7 +100,7 @@ class Frame(QMainWindow):
                     Town.BuildingTypes.getByNumber(self.town.chosen_btype)
                 )
             elif mode == Modes.TownRoadBuilder:
-                self.town.projecting_road = Town.ProjectingRoad(self.town)
+                self.town.projecting_road = Town.ProjectedRoad(self.town)
         self.mode = mode
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -308,7 +309,7 @@ class Frame(QMainWindow):
         elif self.mode == Modes.TownRoadBuilder:
             self.town.projecting_road.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
 
-        self.town.draw(painter, self.size(), 1)
+        self.town.draw(painter, self.size(), .8)
 
         cursor = QPoint(
             self.cursor().pos().x() - self.pos().x(),
@@ -467,6 +468,5 @@ if __name__ == "__main__":
     town = Town.Town()
     frame = Frame(town)
     frame.setMaximumSize(app.screens()[0].size())
-    frame.setWindowTitle("Medieval Rise")
     frame.showMaximized()
     app.exec_()

@@ -95,11 +95,11 @@ Blocks = BlocksManager()
 class Ground:
     """Store data of ground."""
 
-    def __init__(self, variants: Dict[str, str]):
-        self.variants = {item: getImage(variants[item]) for item in variants}
+    def __init__(self, data: Dict[str, str]):
+        self.texture = getImage(data['texture'])
 
-    def draw(self, x: float, y: float, variant: str, painter: QPainter) -> None:
-        painter.drawImage(x - ISOMETRIC_WIDTH, y, self.variants[variant])
+    def draw(self, x: float, y: float, painter: QPainter) -> None:
+        painter.drawImage(x - ISOMETRIC_WIDTH, y, self.texture)
 
 
 class GroundsManager:
@@ -300,7 +300,7 @@ class Mask:
 class MasksManager:
     """Store all Masks."""
 
-    masks = {}
+    masks = {''}
 
     def __getattr__(self, item: str) -> Mask:
         return self.masks[item]

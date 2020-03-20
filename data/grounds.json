@@ -1,6 +1,5 @@
 {
     "grass": {
-        "default": "grass",
-        "green": "grass_green"
+        "texture": "grass"
     }
 }
