@@ -263,16 +263,10 @@ class ProjectedBuilding:
         return True
 
     def addToMap(self, iso: QPointF) -> None:
-        for x in range(len(self.blocks)):
-            for y in range(len(self.blocks[0])):
-                for z in range(len(self.blocks[x][y])):
-                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
-                        self.town.removeBlock(x + self.x, y + self.y, z)
-                    if self.town.isBlockEmpty(x + round(iso.x()), y + round(iso.y()), z):
-                        self.town.addBlock(x + round(iso.x()), y + round(iso.y()), z, self)
-
+        self._delOldBlocks()
         self.x = round(iso.x())
         self.y = round(iso.y())
+        self._addNewBlocks()
 
     def group(self):
         return self._building_type.group

@@ -72,7 +72,7 @@ class Frame(QMainWindow):
         self.menuAnimation = 0
         self.destroy_pos = None
 
-        self.draw_thread = Interval(1 / 160, self.update)
+        self.draw_thread = Interval(1 / 60, self.update)
         self.town_tick_thread = Interval(1 / 20, lambda: town.tick(self.size()))
         self.town_tick_thread.start()
         self.draw_thread.start()
