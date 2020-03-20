@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import math
 from enum import Enum
+from math import sin
 from threading import Event, Thread
 from types import FunctionType
 
@@ -71,6 +73,7 @@ class Frame(QMainWindow):
         self.menu_mode = 1
         self.menuAnimation = 0
         self.destroy_pos = None
+        self.blinkAnimation = 0
 
         self.draw_thread = Interval(1 / 60, self.update)
         self.town_tick_thread = Interval(1 / 20, lambda: town.tick(self.size()))
@@ -296,6 +299,20 @@ class Frame(QMainWindow):
         else:
             painter.drawPixmap(rect.x(), rect.y(), tex)
 
+    def drawKey(self, painter, cursor, name, x, y):
+        pix = QPixmap(self.height() / 10, self.height() / 20)
+        pix.fill(Qt.transparent)
+        pain = QPainter(pix)
+        pain.setFont(QFont("Times New Roman", self.height() / 40))
+
+        metrics = pain.fontMetrics()
+        button_width = max(self.height() / 20, metrics.width(name) + self.height() / 80 + 6)
+        pain.drawText((button_width - metrics.width(name)) / 2, self.height() * 3 / 80 - 3, name)
+        pain.end()
+        rect = QRect(x, y, button_width, self.height() / 20 + 4)
+        self.drawButton(painter, cursor, rect, pix, resize=False)
+        return rect
+
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = QPainter(self)
 
@@ -304,12 +321,14 @@ class Frame(QMainWindow):
             self.height()
         ) / 2) * self.town.cam_z + QPoint(self.town.cam_x, self.town.cam_y)
 
-        if self.mode == Modes.TownBuilder:
-            self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
-        elif self.mode == Modes.TownRoadBuilder:
+        if self.mode == Modes.TownRoadBuilder:
             self.town.projecting_road.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
-
-        self.town.draw(painter, self.size(), .8)
+            self.town.draw(painter, self.size(), .8, .4)
+        else:
+            if self.mode == Modes.TownBuilder:
+                self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
+            self.town.draw(painter, self.size(), math.sin(math.radians(self.blinkAnimation)) * .2 + .5)
+            self.blinkAnimation += 4
 
         cursor = QPoint(
             self.cursor().pos().x() - self.pos().x(),
@@ -330,25 +349,12 @@ class Frame(QMainWindow):
         elif self.menu_mode == 2:
             types = Town.RoadTypes
         for i in range(len(types.sorted_names)):
-            pix = QPixmap(self.height() * .2, self.height() * .2)
-            pix.fill(Qt.transparent)
-            pain = QPainter(pix)
-            pain.save()
-            pain.translate(self.height() * .05, self.height() * .05)
-            pain.scale(.5, .5)
-            types.getByNumber(i).drawDefault(
-                self.height() * .1,
-                self.height() * .1,
-                pain
-            )
-            pain.restore()
-            pain.end()
             self.drawButton(painter, cursor, QRect(
                 self.height() * (3 * i + 1) / 15 - self.scrollAmount - 4,
                 self.height() * .8 + self.menuAnimation,
                 self.height() * .2,
                 self.height() * .2
-            ), pix)
+            ), types.getByNumber(i).drawDefault(QSize(self.height() * .2 - 6, self.height() * .2 - 10)))
         self.drawButton(
             painter,
             cursor,
@@ -375,92 +381,21 @@ class Frame(QMainWindow):
             painter.setPen(Qt.black)                              # \ for drawing text
             painter.setFont(QFont("arial", self.width() // 100))  # /
 
-            pix = QPixmap(self.height() / 10, self.height() / 20)       # \
-            pix.fill(Qt.transparent)                                    # | for drawing buttons
-            pain = QPainter(pix)                                        # |
-            pain.setFont(QFont("Times New Roman", self.height() / 35))  # /
+            r = self.drawKey(painter, cursor, "I", self.width() * .41, self.height() * .35)
+            painter.drawText(r.right() + 10, self.height() * .38 + 2, " открывает/закрывает это меню.")
 
-            pain.setCompositionMode(pain.CompositionMode_Clear)
-            pain.eraseRect(pix.rect())
-            pain.setCompositionMode(pain.CompositionMode_Source)
-            pain.drawText(self.height() / 49, self.height() / 29, "I")
-            self.drawButton(
-                painter,
-                cursor,
-                QRect(self.width() * .41, self.height() * .35, self.height() / 20, self.height() / 20 + 4),
-                pix,
-                resize=False
-            )
-            painter.drawText(
-                self.width() * .41 + self.height() / 20, self.height() * .38, " открывает/закрывает это меню."
-            )
+            r = self.drawKey(painter, cursor, "ESC", self.width() * .41, self.height() * .40 + 4)
+            painter.drawText(r.right() + 10, self.height() * .43 + 6, " отменяет действие.")
 
-            pain.setCompositionMode(pain.CompositionMode_Clear)
-            pain.eraseRect(pix.rect())
-            pain.setCompositionMode(pain.CompositionMode_Source)
-            pain.drawText(self.height() / 100, self.height() / 29, "ESC")
-            self.drawButton(
-                painter,
-                cursor,
-                QRect(self.width() * .41, self.height() * .40 + 4, self.height() / 14, self.height() / 20 + 4),
-                pix,
-                resize=False
-            )
-            painter.drawText(
-                self.width() * .41 + self.height() / 14, self.height() * .43 + 4, " отменят действие."
-            )
+            r = self.drawKey(painter, cursor, "←", self.width() * .41, self.height() * .45 + 8)
+            r = self.drawKey(painter, cursor, "→", self.width() * .41 + r.width(), self.height() * .45 + 8)
+            painter.drawText(r.right() + 10, self.height() * .48 + 10, " поворачивают здания.")
 
-            pain.setCompositionMode(pain.CompositionMode_Clear)
-            pain.eraseRect(pix.rect())
-            pain.setCompositionMode(pain.CompositionMode_Source)
-            pain.drawText(self.height() / 100, self.height() / 31, "←")
-            self.drawButton(
-                painter,
-                cursor,
-                QRect(self.width() * .41, self.height() * .45 + 8, self.height() / 20, self.height() / 20 + 4),
-                pix,
-                resize=False
-            )
-            pain.setCompositionMode(pain.CompositionMode_Clear)
-            pain.eraseRect(pix.rect())
-            pain.setCompositionMode(pain.CompositionMode_Source)
-            pain.drawText(self.height() / 100, self.height() / 31, "→")
-            self.drawButton(painter, cursor, QRect(
-                self.width() * .41 + self.height() / 20,
-                self.height() * .45 + 8,
-                self.height() / 20,
-                self.height() / 20 + 4
-            ), pix, resize=False)
-            painter.drawText(
-                self.width() * .41 + self.height() / 10, self.height() * .48 + 8, " поворачивает здания."
-            )
-            painter.drawText(
-                self.width() * .41,
-                self.height() * .52 + 12,
-                "ЛКМ строит или сносит."
-            )
-            painter.drawText(
-                self.width() * .41,
-                self.height() * .55 + 12,
-                "ПКМ перетаскивает карту."
-            )
-            painter.drawText(
-                self.width() * .41,
-                self.height() * .58 + 12,
-                "Колёсико изменяет масштаб."
-            )
-            painter.drawText(
-                self.width() * .41,
-                self.height() * .61 + 12,
-                "Используйте меню, чтобы строить"
-            )
-            painter.drawText(
-                self.width() * .41,
-                self.height() * .625 + 12,
-                "здания и дороги или сносить их."
-            )
-
-            pain.end()
+            painter.drawText(self.width() * .41, self.height() * .53 + 12, "ЛКМ строит или сносит.")
+            painter.drawText(self.width() * .41, self.height() * .555 + 12, "ПКМ перетаскивает карту.")
+            painter.drawText(self.width() * .41, self.height() * .58 + 12, "Колёсико изменяет масштаб.")
+            painter.drawText(self.width() * .41, self.height() * .605 + 12, "Используйте меню, чтобы строить")
+            painter.drawText(self.width() * .41, self.height() * .62 + 12, "здания и дороги или сносить их.")
 
 
 if __name__ == "__main__":
