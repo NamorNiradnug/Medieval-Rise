@@ -2,6 +2,7 @@ from json import load
 from random import choice
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from PyQt5.Qt import QSize
 from PyQt5.QtGui import QPainter, QPixmap
 
 from resources_manager import getImage, getJSON
