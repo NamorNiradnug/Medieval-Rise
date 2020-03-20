@@ -327,7 +327,7 @@ class Frame(QMainWindow):
         else:
             if self.mode == Modes.TownBuilder:
                 self.town.chosen_building.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
-            self.town.draw(painter, self.size(), math.sin(math.radians(self.blinkAnimation)) * .2 + .5)
+            self.town.draw(painter, self.size(), math.sin(math.radians(self.blinkAnimation)) * .2 + .6)
             self.blinkAnimation += 4
 
         cursor = QPoint(

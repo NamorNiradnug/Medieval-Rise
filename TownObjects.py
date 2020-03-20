@@ -3,6 +3,7 @@ from random import choice
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from PyQt5.Qt import QSize
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QPixmap
 
 from resources_manager import getImage, getJSON
@@ -216,6 +217,7 @@ class BuildingType:
     def drawDefault(self, size: QSize) -> QPixmap:
         blocks = self.blocks[self.default_variant]
         pix = QPixmap(size)
+        pix.fill(Qt.transparent)
         painter = QPainter(pix)
         image_height = 5 * ISOMETRIC_HEIGHT2 + 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_HEIGHT1
         image_width = 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_WIDTH
