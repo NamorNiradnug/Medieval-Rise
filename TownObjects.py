@@ -3,6 +3,7 @@ from random import choice
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from PyQt5.Qt import QSize
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainter, QPixmap
 
 from resources_manager import getImage, getJSON
@@ -109,7 +110,7 @@ class GroundsManager:
 
     grounds = {name: Ground(GROUNDS_DATA[name]) for name in GROUNDS_DATA}
 
-    def __getattr__(self, item):
+    def __getattr__(self, item) -> Ground:
         if item in self.grounds:
             return self.grounds[item]
         raise AttributeError(f'Ground "{item}" does not exist.')
@@ -215,25 +216,28 @@ class BuildingType:
 
     def drawDefault(self, size: QSize) -> QPixmap:
         blocks = self.blocks[self.default_variant]
-        pix = QPixmap(size)
+        pix_ = QPixmap((2 + max(len(blocks), len(blocks[0]))) * ISOMETRIC_WIDTH * 4,
+                            (2 + max(len(blocks), len(blocks[0]))) * ISOMETRIC_HEIGHT1 + 4 * ISOMETRIC_HEIGHT2)
+        pix = pix_.scaled(size * max(pix_.height() / size.height(), pix_.width() / size.width()) / 1.75)
+        pix.fill(Qt.transparent)
         painter = QPainter(pix)
-        image_height = 5 * ISOMETRIC_HEIGHT2 + 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_HEIGHT1
-        image_width = 2 * max(len(blocks), len(blocks[0])) * ISOMETRIC_WIDTH
-        scale = min(size.width() / image_width, size.height() / image_height)
-        painter.scale(scale, scale)
-        fx = size.width() / 2
-        fy = size.height() - max(len(blocks), len(blocks[0])) * 2 * ISOMETRIC_HEIGHT1
-        for block_x in range(len(blocks)):
-            for block_y in range(len(blocks[block_x])):
-                for z in range(len(blocks[block_x][block_y])):
-                    if blocks[block_x][block_y][z] is not None:
-                        blocks[block_x][block_y][z].draw(
-                            (block_x - block_y) * ISOMETRIC_WIDTH + fx,
-                            (block_x + block_y) * ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 + fy,
-                            0, painter, self.default_blocks[block_x][block_y][z]
-                        )
+        fx = .5 * pix.width()
+        fy = (3 * ISOMETRIC_HEIGHT2) * pix.height() / pix_.height()
+        for block_x in range(-1, len(blocks) + 1):
+            for block_y in range(-1, len(blocks[0]) + 1):
+                Grounds.grass.draw((block_x - block_y) * ISOMETRIC_WIDTH + fx,
+                                    (block_x + block_y)*ISOMETRIC_HEIGHT1 + fy, painter)
+                if 0 <= block_x < len(blocks) and 0 <= block_y < len(blocks[0]):
+                    for z in range(len(blocks[block_x][block_y])):
+                        if blocks[block_x][block_y][z] is not None:
+                            blocks[block_x][block_y][z].draw(
+                                (block_x - block_y) * ISOMETRIC_WIDTH + fx,
+                                (block_x + block_y) * ISOMETRIC_HEIGHT1 - z * ISOMETRIC_HEIGHT2 + fy,
+                                0, painter, self.default_blocks[block_x][block_y][z]
+                            )
         painter.end()
         return pix
+
 
 
 class BuildingTypeManager:
@@ -269,9 +273,13 @@ class RoadType:
                          'left-up': getImage(f'{name}_part'),
                          'left-down': getImage(f'{name}_part').mirrored(True, False)}
 
-    def drawDefault(self,x: int, y: int, painter: QPainter) -> None:
-        painter.drawImage(x - ISOMETRIC_WIDTH / 2, y - ISOMETRIC_HEIGHT1 / 2, self.textures['center'])
-
+    def drawDefault(self, size: QSize) -> QPixmap:
+        pix = QPixmap(size)
+        pix.fill(Qt.transparent)
+        painter = QPainter(pix)
+        painter.drawImage(size.width() / 2 - ISOMETRIC_WIDTH / 2, size.height() / 2 - ISOMETRIC_HEIGHT1 / 2, self.textures['center'])
+        painter.end()
+        return pix
 
 ROAD_TYPES_DATA = getJSON('roads_types')
 
