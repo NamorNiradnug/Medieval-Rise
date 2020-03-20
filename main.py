@@ -308,7 +308,7 @@ class Frame(QMainWindow):
         elif self.mode == Modes.TownRoadBuilder:
             self.town.projecting_road.addToMap(Town.isometric(cursor_pos.x(), cursor_pos.y()))
 
-        self.town.draw(painter, self.size())
+        self.town.draw(painter, self.size(), 1)
 
         cursor = QPoint(
             self.cursor().pos().x() - self.pos().x(),

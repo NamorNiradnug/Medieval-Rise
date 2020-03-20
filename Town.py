@@ -51,7 +51,7 @@ class Chunk:
             for j in range(16):
 
                 self.grounds[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
-                                        ISOMETRIC_HEIGHT1 - y, ground_variant, painter)
+                                        ISOMETRIC_HEIGHT1 - y, 'default', painter)
 
                 # Draw road
                 if self.roads[i][j] is not None:
@@ -61,7 +61,7 @@ class Chunk:
                     painter.setOpacity(1)
 
                 if self.masks[i][j] is not None:
-                    
+                   self.masks[i][j].draw(x, y, painter) 
 
                 # Draw citizens
                 for citizen in self.citizens[i][j]:
@@ -382,7 +382,7 @@ class Town:
         for chunks in self.chunks:
             for chunk in chunks:
                 if self._isChunkVisible(chunk, size):
-                    chunk.draw(painter, x, y)
+                    chunk.draw(painter, x, y, projecting_opacity)
 
         painter.restore()
 
