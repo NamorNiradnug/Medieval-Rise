@@ -61,7 +61,7 @@ class Frame(QMainWindow):
 
         self.town = town
 
-        self.default_cursor = QCursor(QPixmap("assets/cursor.png"))
+        self.default_cursor = QCursor(QPixmap.fromImage(getImage("cursor")))
 
         self.last_pos = self.cursor().pos()
         self.last_button = Qt.NoButton
