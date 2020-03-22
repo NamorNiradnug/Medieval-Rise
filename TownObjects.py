@@ -15,6 +15,8 @@ ISOMETRIC_HEIGHT2 = 79  # |
 BLOCKS_DATA = getJSON("blocks")
 GROUNDS_DATA = getJSON("grounds")
 BUILDING_TYPES_DATA = getJSON("building_types")
+ROAD_TYPES_DATA = getJSON('roads_types')
+GROUPS_DATA = getJSON("buildings_groups")
 
 
 def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
@@ -22,6 +24,9 @@ def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
 
     return max([len(blocks_y) for blocks_y in matrix])
 
+
+def matrix3DHeight(matrix: Tuple[Tuple[Tuple[Any]]]) -> int:
+    return max(max(len(data_ij) for data_ij in data_i) for data_i in matrix)
 
 class Block:
     """Store data of block."""
@@ -91,7 +96,7 @@ class BlocksManager:
         raise AttributeError(f'Block "{item}" does not exist.')
 
 
-Blocks = BlocksManager()
+Blocks = BlocksManager() # it have to be here because BuildingsTypesManager uses it
 
 
 class Ground:
@@ -114,12 +119,6 @@ class GroundsManager:
         if item in self.grounds:
             return self.grounds[item]
         raise AttributeError(f'Ground "{item}" does not exist.')
-
-
-Grounds = GroundsManager()
-
-
-GROUPS_DATA = getJSON("buildings_groups")
 
 
 class BuildingGroups:
@@ -216,17 +215,17 @@ class BuildingType:
 
     def drawDefault(self, size: QSize) -> QPixmap:
         blocks = self.blocks[self.default_variant]
-        pix_ = QPixmap((2 + max(len(blocks), len(blocks[0]))) * ISOMETRIC_WIDTH * 4,
-                            (2 + max(len(blocks), len(blocks[0]))) * ISOMETRIC_HEIGHT1 + 4 * ISOMETRIC_HEIGHT2)
-        pix = pix_.scaled(size * max(pix_.height() / size.height(), pix_.width() / size.width()) / 1.75)
+        pix = QPixmap((4 + len(blocks) + len(blocks[0])) * ISOMETRIC_WIDTH,
+                            (len(blocks) + len(blocks[0]) + 3) * ISOMETRIC_HEIGHT1 +
+                                                            matrix3DHeight(blocks) * ISOMETRIC_HEIGHT2)
         pix.fill(Qt.transparent)
         painter = QPainter(pix)
-        fx = .5 * pix.width()
-        fy = (3 * ISOMETRIC_HEIGHT2) * pix.height() / pix_.height()
+        fx = pix.width() * (2 + len(blocks[0])) / (4 + len(blocks) + len(blocks[0]))
+        fy = matrix3DHeight(blocks) * ISOMETRIC_HEIGHT2 + ISOMETRIC_HEIGHT1
         for block_x in range(-1, len(blocks) + 1):
             for block_y in range(-1, len(blocks[0]) + 1):
                 Grounds.grass.draw((block_x - block_y) * ISOMETRIC_WIDTH + fx,
-                                    (block_x + block_y)*ISOMETRIC_HEIGHT1 + fy, painter)
+                                    (block_x + block_y) * ISOMETRIC_HEIGHT1 + fy, painter)
                 if 0 <= block_x < len(blocks) and 0 <= block_y < len(blocks[0]):
                     for z in range(len(blocks[block_x][block_y])):
                         if blocks[block_x][block_y][z] is not None:
@@ -236,8 +235,13 @@ class BuildingType:
                                 0, painter, self.default_blocks[block_x][block_y][z]
                             )
         painter.end()
-        return pix
-
+        some_size = size * max(.1 + pix.height() / size.height(), pix.width() / size.width())
+        pixmap = QPixmap(some_size)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.drawPixmap((some_size.width() - pix.width()) / 2, (some_size.height() - pix.height()) / 2, pix)
+        painter.end()
+        return pixmap
 
 
 class BuildingTypeManager:
@@ -262,9 +266,6 @@ class BuildingTypeManager:
         return self.building_types[item]
 
 
-BuildingTypes = BuildingTypeManager()
-
-
 class RoadType:
     def __init__(self, name: str):
         self.textures = {'center': getImage(f'{name}_center'),
@@ -277,11 +278,11 @@ class RoadType:
         pix = QPixmap(size)
         pix.fill(Qt.transparent)
         painter = QPainter(pix)
-        painter.drawImage(size.width() / 2 - ISOMETRIC_WIDTH / 2, size.height() / 2 - ISOMETRIC_HEIGHT1 / 2, self.textures['center'])
+        painter.drawImage(size.width() / 2 - ISOMETRIC_WIDTH / 2,
+                          size.height() / 2 - ISOMETRIC_HEIGHT1 / 2, 
+                          self.textures['center'])
         painter.end()
         return pix
-
-ROAD_TYPES_DATA = getJSON('roads_types')
 
 
 class RoadTypesManager:
@@ -303,9 +304,6 @@ class RoadTypesManager:
         return self.__getattr__(self.sorted_names[num])
 
 
-RoadTypes = RoadTypesManager()
-
-
 class Mask:
     """Mask for ground."""
     
@@ -325,4 +323,7 @@ class MasksManager:
         return self.masks[item]
 
 
+RoadTypes = RoadTypesManager()
 Masks = MasksManager()
+BuildingTypes = BuildingTypeManager()
+Grounds = GroundsManager()
