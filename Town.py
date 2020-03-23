@@ -241,7 +241,7 @@ class Building(TownObject):
 
     def save(self, file: TextIO) -> None:
         file.write(f'{self.x} {self.y} {self.angle} {fromValues(self.building_type, BuildingTypes.building_types)} ' + 
-                       f'{self.btype_variant}\n')
+                       f'{self.btype_variant} ')
         for x in range(len(self.blocks_variants)):
             for y in range(len(self.blocks_variants[0])):
                 for var in self.blocks_variants[x][y]:
@@ -251,7 +251,6 @@ class Building(TownObject):
                         file.write(f'0 ')
         file.write('\n')
         
-
 
 class ProjectedBuilding:
     """Building which player's projecting to build."""
@@ -378,7 +377,7 @@ class ProjectedBuilding:
 
 
 class Town:
-    def __init__(self):
+    def __init__(self, file: TextIO = None):
         self.version = 0
         self.name = "Carcassonne"
 
@@ -581,6 +580,15 @@ class Town:
                 })
         return answer
 
+    def load(self, file_name: str) -> None:
+        """Load town data from file."""
+
+        with open(file_name) as file:
+            self.version = int(file.readline()[:-1])
+            self.name = file.readline()[:-1]
+            for building_data in file.readlines():
+                pass  # TODO: uppack buildings
+            
 
 class Citizen:
     """Citizen of building. He walks."""
