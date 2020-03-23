@@ -3,7 +3,7 @@ import platform
 import os
 import getpass # for getting username in Windows
 from random import randint
-from typing import Any, Set, TextIO, Tuple
+from typing import Any, Dict, Set, TextIO, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
@@ -29,6 +29,14 @@ def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
             rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
             and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
     )
+
+
+def fromValues(value: Any, data: Dict[Any, Any]) -> Any:
+    for key in data:
+        if data[key] == value:
+            return key
+
+    raise ValueError(f"Value {value} is not in data.values().")
 
 
 class Chunk:
@@ -200,6 +208,7 @@ class Building(TownObject):
                  blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
+        self.btype_variant = btype_variant
 
         self.blocks = turnMatrix(building_type.blocks[btype_variant], angle)
         self.blocks_variants = blocks_variants
@@ -230,8 +239,18 @@ class Building(TownObject):
             self.blocks_variants[x - self.x][y - self.y][z],
         )
 
-    def save(self, save: TextIO) -> None:
-        save.write(f'{self.angle} {BuildingTypes.sorted_names.index(self.building_type)} ')
+    def save(self, file: TextIO) -> None:
+        file.write(f'{self.x} {self.y} {self.angle} {fromValues(self.building_type, BuildingTypes.building_types)} ' + 
+                       f'{self.btype_variant}\n')
+        for x in range(len(self.blocks_variants)):
+            for y in range(len(self.blocks_variants[0])):
+                for var in self.blocks_variants[x][y]:
+                    if var is not None:
+                        file.write(f'{var} ')
+                    else:
+                        file.write(f'0 ')
+        file.write('\n')
+        
 
 
 class ProjectedBuilding:
@@ -275,11 +294,6 @@ class ProjectedBuilding:
 
     def group(self):
         return self._building_type.group
-
-    def center(self) -> Tuple[int, int]:
-        """Center of building."""
-
-        return self.x + len(self.blocks) // 2, self.y + len(self.blocks[0]) // 2
 
     def doorCheck(self) -> bool:
         for x in range(self.x - 1, self.x + len(self.blocks) + 1):
@@ -496,12 +510,22 @@ class Town:
         if project is None:
             return
 
-        is_group_exist = False
+        if all(building.building_type.group != project.group() for building in self.buildings):
+            for chunks in self.chunks:
+                for chunk in chunks:
+                    chunk.masks = tuple([Masks.green if self.isBlockEmpty(x + chunk.x, y + chunk.y, 0, False) else None for y in range(16)]
+                                            for x in range(16))
+            for building in self.buildings:
+                for i in range(building.x, building.x + len(building.blocks)):
+                    for j in range(building.y, building.y + len(building.blocks[0])):
+                        if self.getBuilding(i, j) is not None:
+                            for x, y in self.getBlock(i, j)[0].placesThatMustBeEmpty(*self.getBlock(i, j)[1:]):
+                                self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = None
+            return
 
         radius = BuildingGroups.distances[project.group()] + max(len(project.blocks), len(project.blocks[0]))
         for building in self.buildings:
             if building.building_type.group == project.group():
-                is_group_exist = True
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
                         if self.getBuilding(i, j) is not None:
@@ -512,10 +536,6 @@ class Town:
                                     self.getRoad(x, y) is None:
                                         self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
 
-        if not is_group_exist:
-            for chunks in self.chunks:
-                for chunk in chunks:
-                    chunk.masks = tuple([[Masks.green] * 16 for _ in range(16)])
 
     def save(self):
         if platform.system() == "Windows":
