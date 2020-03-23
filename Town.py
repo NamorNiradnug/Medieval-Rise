@@ -1,6 +1,9 @@
 from bisect import insort, bisect
+import platform
+import os
+import getpass # for getting username in Windows
 from random import randint
-from typing import Any, Set, Tuple
+from typing import Any, Set, TextIO, Tuple
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
@@ -197,9 +200,8 @@ class Building(TownObject):
                  blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
-        self.btype_variant = btype_variant
 
-        self.blocks = turnMatrix(self.building_type.blocks[btype_variant], angle)
+        self.blocks = turnMatrix(building_type.blocks[btype_variant], angle)
         self.blocks_variants = blocks_variants
 
         town.buildings.append(self)
@@ -227,6 +229,9 @@ class Building(TownObject):
             self.angle,
             self.blocks_variants[x - self.x][y - self.y][z],
         )
+
+    def save(self, save: TextIO) -> None:
+        save.write(f'{self.angle} {BuildingTypes.sorted_names.index(self.building_type)} ')
 
 
 class ProjectedBuilding:
@@ -360,6 +365,9 @@ class ProjectedBuilding:
 
 class Town:
     def __init__(self):
+        self.version = 0
+        self.name = "Carcassonne"
+
         self.cam_x = 0.0  # |
         self.cam_y = 0.0  # | - position of camera.
         self.cam_z = 1.0  # |
@@ -509,8 +517,20 @@ class Town:
                 for chunk in chunks:
                     chunk.masks = tuple([[Masks.green] * 16 for _ in range(16)])
 
-    # TODO saving
+    def save(self):
+        if platform.system() == "Windows":
+            file_name = f"C:\\Users\\{getpass.getuser()}\\AppData\\Roaming\\Medieval-Rise\\save.dat"
+        elif platform.system() == "Darwin":
+            file_name = f"{os.path.expanduser('~')}/Library/Application Support/Medieval-Rise/save.dat"
+        else:
+            file_name = f"{os.path.expanduser('~')}/.medieval-rise/save.dat"
 
+        with open(file_name, 'w') as file:
+            file.write(f'{self.version}\n')
+            file.write(f'{self.name}\n')
+            for building in self.buildings:
+                building.save(file)
+        
     def tick(self, screen: QSize) -> None:
         """Game tick."""
 

@@ -110,6 +110,7 @@ class Frame(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         self.draw_thread.cancel()
         self.town_tick_thread.cancel()
+        self.town.save()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.last_button = event.button()
