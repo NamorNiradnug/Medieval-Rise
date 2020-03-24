@@ -385,6 +385,7 @@ class Town:
         self.chosen_building = None
         self.chosen_btype = 0
         self.projecting_road = None
+        self.chosen_rtype = 0
 
         self.buildings = []
         # Generate 256 initial chunks.

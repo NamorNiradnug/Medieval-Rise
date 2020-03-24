@@ -397,9 +397,6 @@ class Frame(QMainWindow):
                 painter.setPen(Qt.black)                              # \ for drawing text
                 painter.setFont(QFont("arial", self.width() // 100))  # /
 
-                painter.setPen(Qt.black)                              # \ for drawing text
-                painter.setFont(QFont("arial", self.width() // 100))  # /
-
                 r = self.drawKey(painter, cursor, "I", self.width() * .41, self.height() * .35)
                 painter.drawText(r.right() + 10, self.height() * .38 + 2, " открывает/закрывает это меню.")
 
