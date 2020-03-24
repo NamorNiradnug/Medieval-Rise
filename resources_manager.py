@@ -30,6 +30,6 @@ def getImage(name: str, get_null: bool = False) -> QImage:
 
 def getJSON(name: str) -> dict:
     """Converted JSON file called name in data."""
-    
+
     with open(os.path.join(wd, "data", name + ".json")) as f:
         return json.load(f)

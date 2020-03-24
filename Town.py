@@ -1,9 +1,9 @@
 from bisect import insort, bisect
 import platform
 import os
-import getpass # for getting username in Windows
+import getpass  # for getting username in Windows
 from random import randint
-from typing import Any, Dict, Set, TextIO, Tuple
+from typing import Any, Dict, Set, TextIO, Tuple, Union
 
 from PyQt5.Qt import QPoint, QPointF, QSize, QWheelEvent
 from PyQt5.QtGui import QPainter
@@ -26,8 +26,8 @@ def isPointInRect(point: QPoint, rect: Tuple[QPoint, QSize]) -> bool:
     """Checking the position of a point relative to a rectangle."""
 
     return (
-            rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
-            and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
+        rect[0].x() <= point.x() <= rect[0].x() + rect[1].width()
+        and rect[0].y() <= point.y() <= rect[0].y() + rect[1].height()
     )
 
 
@@ -76,7 +76,7 @@ class Chunk:
                 # Draw mask
                 painter.setOpacity(builded_opacity)
                 if self.masks[i][j] is not None:
-                   self.masks[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
+                    self.masks[i][j].draw((self.x + i - self.y - j) * ISOMETRIC_WIDTH - x, (self.x + self.y + i + j) *
                                           ISOMETRIC_HEIGHT1 - y, painter)
                 # Draw citizens
                 painter.setOpacity(1)
@@ -163,13 +163,11 @@ class Road(TownObject):
                               (self.x + self.y + 1) * ISOMETRIC_HEIGHT1 - y, textures['right-down'])
 
 
-class ProjectedRoad:
+class ProjectedRoad(Road):
     def __init__(self, town: 'Town', road_type: RoadType = RoadTypes.road):
         self.town = town
         self.road_type = road_type
-        coords = isometric(town.cam_x, town.cam_y)
-        self.x = round(coords.x())
-        self.y = round(coords.y())
+        self.x = self.y = 0
         self._addToMap()
 
     def _delFromMap(self) -> None:
@@ -204,8 +202,8 @@ class ProjectedRoad:
 class Building(TownObject):
     """Building class. It only exists. For now."""
 
-    def __init__(self, x: int, y: int, angle: int, town, building_type: BuildingType,
-                 blocks_variants: Tuple[Tuple[Tuple[str]]], btype_variant: str):
+    def __init__(self, x: int, y: int, angle: int, town: 'Town', building_type: BuildingType,
+                 blocks_variants: Tuple[Tuple[Tuple[Union[str, None]]]], btype_variant: str):
         super().__init__(x, y, angle, town)
         self.building_type = building_type
         self.btype_variant = btype_variant
@@ -240,17 +238,15 @@ class Building(TownObject):
         )
 
     def save(self, file: TextIO) -> None:
-        file.write(f'{self.x} {self.y} {self.angle} {fromValues(self.building_type, BuildingTypes.building_types)} ' + 
-                       f'{self.btype_variant} ')
+        file.write(f'{self.x} {self.y} {self.angle // 90} {fromValues(self.building_type, BuildingTypes.building_types)} ' +
+                   f'{self.btype_variant} ')
         for x in range(len(self.blocks_variants)):
             for y in range(len(self.blocks_variants[0])):
                 for var in self.blocks_variants[x][y]:
                     if var is not None:
                         file.write(f'{var} ')
-                    else:
-                        file.write(f'0 ')
         file.write('\n')
-        
+
 
 class ProjectedBuilding:
     """Building which player's projecting to build."""
@@ -281,8 +277,8 @@ class ProjectedBuilding:
             for y in range(len(self.blocks[0])):
                 y += self.y
                 if self.town.chunks[x // 16][y // 16].masks[x % 16][y % 16] != Masks.green and \
-                     self.getBlock(x, y, 0) is not None:
-                     return False
+                        self.getBlock(x, y, 0) is not None:
+                    return False
         return True
 
     def addToMap(self, iso: QPointF) -> None:
@@ -377,7 +373,7 @@ class ProjectedBuilding:
 
 
 class Town:
-    def __init__(self, file: TextIO = None):
+    def __init__(self):
         self.version = 0
         self.name = "Carcassonne"
 
@@ -394,7 +390,7 @@ class Town:
         # Generate 256 initial chunks.
         self.chunks = [[Chunk(i, j) for j in range(16)] for i in range(16)]
 
-    def addBlock(self, x: int, y: int, z: int, building: Building) -> None:
+    def addBlock(self, x: int, y: int, z: int, building: Union[Building, ProjectedBuilding]) -> None:
         if 0 <= x <= 255 and 0 <= y <= 255:
             self.chunks[x // 16][y // 16].blocks[x % 16][y % 16][z] = building
 
@@ -447,7 +443,7 @@ class Town:
                 size.height() * self.cam_z)
 
     def isNearBuildingWithGroup(self, group: int, point: Tuple[int, int]) -> bool:
-        """Check for buildings in radius equel group max distance."""
+        """Check for buildings in radius equal group max distance."""
 
         is_group_exist = False
         for building in self.buildings:
@@ -462,7 +458,7 @@ class Town:
                 return True
         return False
 
-    def getBlock(self, x: int, y: int, z: int = 0) -> Tuple[Block, int, int, int, str]:
+    def getBlock(self, x: int, y: int, z: int = 0) -> Union[Tuple[Block, int, int, int, str], None]:
         """Block data on position x, y, z."""
 
         building = self.getBuilding(x, y, z)
@@ -512,8 +508,8 @@ class Town:
         if all(building.building_type.group != project.group() for building in self.buildings):
             for chunks in self.chunks:
                 for chunk in chunks:
-                    chunk.masks = tuple([Masks.green if self.isBlockEmpty(x + chunk.x, y + chunk.y, 0, False) else None for y in range(16)]
-                                            for x in range(16))
+                    chunk.masks = tuple([Masks.green if self.isBlockEmpty(x + chunk.x, y + chunk.y, 0, False)
+                                         else None for y in range(16)] for x in range(16))
             for building in self.buildings:
                 for i in range(building.x, building.x + len(building.blocks)):
                     for j in range(building.y, building.y + len(building.blocks[0])):
@@ -529,27 +525,36 @@ class Town:
                     for j in range(building.y, building.y + len(building.blocks[0])):
                         if self.getBuilding(i, j) is not None:
                             for x, y in self.manhattanCircle((i, j), radius):
-                                if all((self.getBlock(xx, yy) is None or
-                                            not (x, y) in self.getBlock(xx, yy)[0].placesThatMustBeEmpty(*self.getBlock(xx, yy)[1:]))
-                                                for xx, yy in ((x, y - 1), (x, y + 1), (x + 1, y), (x - 1, y))) and \
-                                    self.getRoad(x, y) is None:
-                                        self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
+                                if (all((self.getBlock(xx, yy) is None or not (x, y) in
+                                         self.getBlock(xx, yy)[0].placesThatMustBeEmpty(*self.getBlock(xx, yy)[1:]))
+                                        for xx, yy in ((x, y - 1), (x, y + 1), (x + 1, y), (x - 1, y)))
+                                        and self.getRoad(x, y) is None):
+                                    self.chunks[x // 16][y // 16].masks[x % 16][y % 16] = Masks.green
 
+    @staticmethod
+    def _saveFileName():
+        if platform.system() == "Windows":
+            return f"C:\\Users\\{getpass.getuser()}\\AppData\\Roaming\\Medieval-Rise\\save.dat"
+        elif platform.system() == "Darwin":
+            return f"{os.path.expanduser('~')}/Library/Application Support/Medieval-Rise/save.dat"
+        else:
+            return f"{os.path.expanduser('~')}/.medieval-rise/save.dat"
 
     def save(self):
-        if platform.system() == "Windows":
-            file_name = f"C:\\Users\\{getpass.getuser()}\\AppData\\Roaming\\Medieval-Rise\\save.dat"
-        elif platform.system() == "Darwin":
-            file_name = f"{os.path.expanduser('~')}/Library/Application Support/Medieval-Rise/save.dat"
-        else:
-            file_name = f"{os.path.expanduser('~')}/.medieval-rise/save.dat"
+        file_name = self._saveFileName()
 
         with open(file_name, 'w') as file:
             file.write(f'{self.version}\n')
-            file.write(f'{self.name}\n')
+            file.write(f'{self.name} {int(self.cam_x)} {int(self.cam_y)} {self.cam_z}\n')
+            for x in range(256):
+                for y in range(256):
+                    road = self.chunks[x // 16][y // 16].roads[x % 16][y % 16]
+                    if road is not None:
+                        file.write(f'{x} {y} {fromValues(road.road_type, RoadTypes.road_types)} ')
+            file.write('\n')
             for building in self.buildings:
                 building.save(file)
-        
+
     def tick(self, screen: QSize) -> None:
         """Game tick."""
 
@@ -580,15 +585,42 @@ class Town:
                 })
         return answer
 
-    def load(self, file_name: str) -> None:
+    def load(self) -> None:
         """Load town data from file."""
 
-        with open(file_name) as file:
+        with open(self._saveFileName()) as file:
             self.version = int(file.readline()[:-1])
-            self.name = file.readline()[:-1]
+            town_data = file.readline().split()
+            self.name = town_data[0]
+            self.cam_x, self.cam_y, self.cam_z = map(float, town_data[1:])
+            self.scale = 1 / self.cam_z
+            roads_data = file.readline().split()
+            for i in range(0, len(roads_data), 3):
+                Road(self, int(roads_data[i]), int(roads_data[i + 1]), RoadTypes.__getattr__(roads_data[i + 2]))
             for building_data in file.readlines():
-                pass  # TODO: uppack buildings
-            
+                data = building_data.split()
+                building_type = BuildingTypes.__getattr__(data[3])
+                variant = data[4]
+                blocks = turnMatrix(building_type.blocks[variant], int(data[2]) * 90)
+                blocks_variants = [[[None] * len(blocks_xy) for blocks_xy in blocks_x]
+                                   for blocks_x in blocks]
+                count = 0
+                for x in range(len(blocks_variants)):
+                    for y in range(len(blocks_variants[x])):
+                        for z in range(len(blocks_variants[x][y])):
+                            if blocks[x][y][z] is not None:
+                                blocks_variants[x][y][z] = data[count + 5]
+                                count += 1
+                        blocks_variants[x][y] = tuple(blocks_variants[x][y])
+                    blocks_variants[x] = tuple(blocks_variants[x])
+                Building(int(data[0]),
+                         int(data[1]),
+                         int(data[2]) * 90,
+                         self,
+                         building_type,
+                         tuple(blocks_variants),
+                         data[4])
+
 
 class Citizen:
     """Citizen of building. He walks."""
@@ -601,11 +633,11 @@ class Citizen:
 
     def _addToMap(self) -> None:
         insort(self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
-                    int(self.y % 16)], self)
+            int(self.y % 16)], self)
 
     def _delFromOldPosition(self) -> None:
         pos = self.building.town.chunks[int(self.x // 16)][int(self.y // 16)].citizens[int(self.x % 16)][
-                    int(self.y % 16)]
+            int(self.y % 16)]
         pos.pop(bisect(pos, self) - 1)
 
     def __gt__(self, other) -> bool:

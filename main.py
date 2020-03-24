@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import math
 from enum import Enum
-from math import sin
 from threading import Event, Thread
 from types import FunctionType
 
@@ -456,10 +455,10 @@ class Frame(QMainWindow):
                 )
 
 
-
 if __name__ == "__main__":
     app = QApplication([])
     town = Town.Town()
+    town.load()
     frame = Frame(town)
     frame.setMaximumSize(app.screens()[0].size())
     frame.showMaximized()

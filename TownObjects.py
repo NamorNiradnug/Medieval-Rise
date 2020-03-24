@@ -28,6 +28,7 @@ def matrixHeight(matrix: Tuple[Tuple[Any]]) -> int:
 def matrix3DHeight(matrix: Tuple[Tuple[Tuple[Any]]]) -> int:
     return max(max(len(data_ij) for data_ij in data_i) for data_i in matrix)
 
+
 class Block:
     """Store data of block."""
 
@@ -40,7 +41,8 @@ class Block:
                 angle * 90: (
                     getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(4 - angle) % 4], 'NULL')}_left", True),
                     getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(5 - angle) % 4], 'NULL')}_right", True),
-                    getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(6 - angle) % 4], 'NULL')}_right_back", True),
+                    getImage(
+                        f"blocks/{BLOCKS_DATA[name][variant].get(sides[(6 - angle) % 4], 'NULL')}_right_back", True),
                     getImage(f"blocks/{BLOCKS_DATA[name][variant].get(sides[(7 - angle) % 4], 'NULL')}_left_back", True)
                 )
                 for angle in range(4)
@@ -64,7 +66,8 @@ class Block:
         if variant not in self.variants:
             raise AttributeError(f"Block called {self.name} has not variant {variant}.")
 
-        painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2 - ISOMETRIC_HEIGHT1, self.variants[variant][angle][3])
+        painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2 -
+                          ISOMETRIC_HEIGHT1, self.variants[variant][angle][3])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2 - ISOMETRIC_HEIGHT1, self.variants[variant][angle][2])
         painter.drawImage(x - ISOMETRIC_WIDTH, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][0])
         painter.drawImage(x, y - ISOMETRIC_HEIGHT2, self.variants[variant][angle][1])
@@ -96,7 +99,7 @@ class BlocksManager:
         raise AttributeError(f'Block "{item}" does not exist.')
 
 
-Blocks = BlocksManager() # it have to be here because BuildingsTypesManager uses it
+Blocks = BlocksManager()  # it have to be here because BuildingsTypesManager uses it
 
 
 class Ground:
@@ -216,8 +219,8 @@ class BuildingType:
     def drawDefault(self, size: QSize) -> QPixmap:
         blocks = self.blocks[self.default_variant]
         pix = QPixmap((4 + len(blocks) + len(blocks[0])) * ISOMETRIC_WIDTH,
-                            (len(blocks) + len(blocks[0]) + 3) * ISOMETRIC_HEIGHT1 +
-                                                            matrix3DHeight(blocks) * ISOMETRIC_HEIGHT2)
+                      (len(blocks) + len(blocks[0]) + 3) * ISOMETRIC_HEIGHT1 +
+                      matrix3DHeight(blocks) * ISOMETRIC_HEIGHT2)
         pix.fill(Qt.transparent)
         painter = QPainter(pix)
         fx = pix.width() * (2 + len(blocks[0])) / (4 + len(blocks) + len(blocks[0]))
@@ -225,7 +228,7 @@ class BuildingType:
         for block_x in range(-1, len(blocks) + 1):
             for block_y in range(-1, len(blocks[0]) + 1):
                 Grounds.grass.draw((block_x - block_y) * ISOMETRIC_WIDTH + fx,
-                                    (block_x + block_y) * ISOMETRIC_HEIGHT1 + fy, painter)
+                                   (block_x + block_y) * ISOMETRIC_HEIGHT1 + fy, painter)
                 if 0 <= block_x < len(blocks) and 0 <= block_y < len(blocks[0]):
                     for z in range(len(blocks[block_x][block_y])):
                         if blocks[block_x][block_y][z] is not None:
@@ -268,6 +271,7 @@ class BuildingTypeManager:
 
 class RoadType:
     def __init__(self, name: str):
+        self.name = name
         self.textures = {'center': getImage(f'{name}_center'),
                          'right-up': getImage(f'{name}_part').mirrored(False, True),
                          'right-down': getImage(f'{name}_part').mirrored(True, True),
@@ -279,7 +283,7 @@ class RoadType:
         pix.fill(Qt.transparent)
         painter = QPainter(pix)
         painter.drawImage(size.width() / 2 - ISOMETRIC_WIDTH / 2,
-                          size.height() / 2 - ISOMETRIC_HEIGHT1 / 2, 
+                          size.height() / 2 - ISOMETRIC_HEIGHT1 / 2,
                           self.textures['center'])
         painter.end()
         return pix
@@ -296,7 +300,7 @@ class RoadTypesManager:
 
     def __getattr__(self, item: str):
         if item not in self.road_types:
-            raise AttributeError(f'Building type "{item}" does not exists.')
+            raise AttributeError(f'Road type "{item}" does not exists.')
 
         return self.road_types[item]
 
@@ -306,7 +310,7 @@ class RoadTypesManager:
 
 class Mask:
     """Mask for ground."""
-    
+
     def __init__(self, name: str):
         self.image = getImage(name)
 
