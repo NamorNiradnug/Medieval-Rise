@@ -321,7 +321,7 @@ class Mask:
 class MasksManager:
     """Store all Masks."""
 
-    masks = {item: Mask(item) for item in ("green",)}
+    masks = {item: Mask(item) for item in ("green", "yellow")}
 
     def __getattr__(self, item: str) -> Mask:
         return self.masks[item]

@@ -171,10 +171,12 @@ class ProjectedRoad(Road):
         self._addToMap()
 
     def _delFromMap(self) -> None:
+        self.town.chunks[self.x // 16][self.y // 16].masks[self.x % 16][self.y % 16] = None
         if self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] is self:
             self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = None
 
     def _addToMap(self) -> None:
+        self.town.chunks[self.x // 16][self.y // 16].masks[self.x % 16][self.y % 16] = Masks.yellow
         if self.town.isBlockEmpty(self.x, self.y, 0, False):
             self.town.chunks[self.x // 16][self.y // 16].roads[self.x % 16][self.y % 16] = self
 
