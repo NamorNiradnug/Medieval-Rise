@@ -534,9 +534,7 @@ class Town:
             return f"{os.path.expanduser('~')}/.medieval-rise/save.dat"
 
     def save(self):
-        file_name = self._saveFileName()
-
-        with open(file_name, 'w') as file:
+        with open(self._saveFileName(), 'w') as file:
             file.write(f'{self.version}\n')
             file.write(f'{self.name} {int(self.cam_x)} {int(self.cam_y)} {self.cam_z}\n')
             for x in range(256):
