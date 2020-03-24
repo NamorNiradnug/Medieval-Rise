@@ -103,7 +103,10 @@ class Frame(QMainWindow):
                     Town.BuildingTypes.getByNumber(self.town.chosen_btype)
                 )
             elif mode == Modes.TownRoadBuilder:
-                self.town.projecting_road = Town.ProjectedRoad(self.town)
+                self.town.projecting_road = Town.ProjectedRoad(
+                    self.town,
+                    Town.getByNumber(self.town.chosen_rtype)
+                )
         self.mode = mode
 
     def closeEvent(self, event: QCloseEvent) -> None:
