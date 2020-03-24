@@ -98,15 +98,9 @@ class Frame(QMainWindow):
         elif mode not in (Modes.Town, Modes.Pause):
             self.setCursor(transparentCursor())
             if mode == Modes.TownBuilder:
-                self.town.chosen_building = Town.ProjectedBuilding(
-                    self.town,
-                    Town.BuildingTypes.getByNumber(self.town.chosen_btype)
-                )
+                self.town.chosen_building = Town.ProjectedBuilding(self.town)
             elif mode == Modes.TownRoadBuilder:
-                self.town.projecting_road = Town.ProjectedRoad(
-                    self.town,
-                    Town.getByNumber(self.town.chosen_rtype)
-                )
+                self.town.projecting_road = Town.ProjectedRoad(self.town)
         self.mode = mode
 
     def closeEvent(self, event: QCloseEvent) -> None:

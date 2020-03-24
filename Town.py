@@ -166,7 +166,7 @@ class Road(TownObject):
 class ProjectedRoad(Road):
     def __init__(self, town: 'Town', road_type: RoadType = RoadTypes.road):
         self.town = town
-        self.road_type = road_type
+        self.road_type = RoadTypes.getByNumber(town.chosen_btype)
         self.x = self.y = 0
         self._addToMap()
 
@@ -251,8 +251,8 @@ class Building(TownObject):
 class ProjectedBuilding:
     """Building which player's projecting to build."""
 
-    def __init__(self, town: 'Town', building_type: BuildingType = BuildingTypes.getByNumber(0)):
-        self._building_type = building_type
+    def __init__(self, town: 'Town'):
+        self._building_type = BuildingTypes.getByNumber(town.chosen_btype)
         self._angle = 0
         self.blocks = None
         self._btype_variant = None
@@ -350,15 +350,6 @@ class ProjectedBuilding:
         self.blocks_variants = turnMatrix(self.blocks_variants, self._angle)
         self.blocks = turnMatrix(self._building_type.blocks[self._btype_variant], self._angle)
 
-    def setBuildingType(self, building_type: BuildingType) -> None:
-        """Change building type of projecting buildings."""
-
-        self._delOldBlocks()
-        self._building_type = building_type
-        self.generateVariants()
-        self.town.setBuildingMaskForGroup(self.group())
-        self._addNewBlocks()
-
     def turn(self, delta_angle: int) -> None:
         """Turn projecting building on changed angle"""
 
@@ -383,9 +374,8 @@ class Town:
         self.scale = 1.0
 
         self.chosen_building = None
-        self.chosen_btype = 0
         self.projecting_road = None
-        self.chosen_rtype = 0
+        self.chosen_btype = 0
 
         self.buildings = []
         # Generate 256 initial chunks.
