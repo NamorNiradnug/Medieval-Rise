@@ -112,5 +112,52 @@
                 ]
             ]
         }
+    },
+    "tower": {
+        "group": "fort",
+        "blocks": {
+            "first": [
+                [
+                    [
+                        "house_door:stone",
+                        "house:stone",
+                        "house:stone",
+                        "house:stone",
+                        "roof:first"
+                    ]
+                ]
+            ]
+        }
+    },
+    "fort": {
+        "group": "fort",
+        "blocks": {
+            "default": [
+                [
+                    [
+                        "house_door:stone",
+                        "house:stone",
+                        "house:stone",
+                        "house:stone",
+                        "roof:first"
+                    ]
+                ],
+                [
+                    []
+                ],
+                [
+                    []
+                ],
+                [
+                    [
+                        "house_door:stone",
+                        "house:stone",
+                        "house:stone",
+                        "house:stone",
+                        "roof:first"
+                    ]
+                ]
+            ]
+        }
     }
 }

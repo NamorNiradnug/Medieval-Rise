@@ -226,11 +226,12 @@ class Building(TownObject):
         for block_x in range(len(self.blocks)):
             for block_y in range(len(self.blocks[block_x])):
                 for block_z in range(len(self.blocks[block_x][block_y])):
-                    self.town.removeBlock(self.x + block_x, self.y + block_y, block_z)
+                    if self.blocks[block_x][block_y][block_z] is not None:
+                        self.town.removeBlock(self.x + block_x, self.y + block_y, block_z)
         self.town.buildings.remove(self)
         del self
 
-    def getBlock(self, x: int, y: int, z: int) -> Tuple[Block, int, str]:
+    def getBlock(self, x: int, y: int, z: int) -> Tuple[Union[Block, None], int, str]:
         """Data of block on global position x, y, z."""
 
         return (
@@ -270,7 +271,7 @@ class ProjectedBuilding:
         for x in range(len(self.blocks)):
             for y in range(len(self.blocks[0])):
                 for z in range(len(self.blocks[x][y])):
-                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
+                    if self.town.isBlockEmpty(x + self.x, y + self.y, z) and self.blocks[x][y][z] is not None:
                         self.town.addBlock(x + self.x, y + self.y, z, self)
 
     def allOnGreen(self) -> bool:
@@ -279,7 +280,7 @@ class ProjectedBuilding:
             for y in range(len(self.blocks[0])):
                 y += self.y
                 if self.town.chunks[x // 16][y // 16].masks[x % 16][y % 16] != Masks.green and \
-                        self.getBlock(x, y, 0) is not None:
+                        self.town.getBuilding(x, y, 0) is not None:
                     return False
         return True
 
@@ -342,7 +343,7 @@ class ProjectedBuilding:
         for x in range(len(self.blocks)):
             for y in range(len(self.blocks[0])):
                 for z in range(len(self.blocks[x][y])):
-                    if self.town.isBlockEmpty(x + self.x, y + self.y, z):
+                    if self.town.isBlockEmpty(x + self.x, y + self.y, z) and self.blocks[x][y][z] is not None:
                         self.town.removeBlock(x + self.x, y + self.y, z)
 
     def generateVariants(self) -> None:
@@ -579,38 +580,41 @@ class Town:
     def load(self) -> None:
         """Load town data from file."""
 
-        with open(self._saveFileName()) as file:
-            self.version = int(file.readline()[:-1])
-            town_data = file.readline().split()
-            self.name = town_data[0]
-            self.cam_x, self.cam_y, self.cam_z = map(float, town_data[1:])
-            self.scale = 1 / self.cam_z
-            roads_data = file.readline().split()
-            for i in range(0, len(roads_data), 3):
-                Road(self, int(roads_data[i]), int(roads_data[i + 1]), RoadTypes.__getattr__(roads_data[i + 2]))
-            for building_data in file.readlines():
-                data = building_data.split()
-                building_type = BuildingTypes.__getattr__(data[3])
-                variant = data[4]
-                blocks = turnMatrix(building_type.blocks[variant], int(data[2]) * 90)
-                blocks_variants = [[[None] * len(blocks_xy) for blocks_xy in blocks_x]
-                                   for blocks_x in blocks]
-                count = 0
-                for x in range(len(blocks_variants)):
-                    for y in range(len(blocks_variants[x])):
-                        for z in range(len(blocks_variants[x][y])):
-                            if blocks[x][y][z] is not None:
-                                blocks_variants[x][y][z] = data[count + 5]
-                                count += 1
-                        blocks_variants[x][y] = tuple(blocks_variants[x][y])
-                    blocks_variants[x] = tuple(blocks_variants[x])
-                Building(int(data[0]),
-                         int(data[1]),
-                         int(data[2]) * 90,
-                         self,
-                         building_type,
-                         tuple(blocks_variants),
-                         data[4])
+        try:
+            with open(self._saveFileName()) as file:
+                self.version = int(file.readline()[:-1])
+                town_data = file.readline().split()
+                self.name = town_data[0]
+                self.cam_x, self.cam_y, self.cam_z = map(float, town_data[1:])
+                self.scale = 1 / self.cam_z
+                roads_data = file.readline().split()
+                for i in range(0, len(roads_data), 3):
+                    Road(self, int(roads_data[i]), int(roads_data[i + 1]), RoadTypes.__getattr__(roads_data[i + 2]))
+                for building_data in file.readlines():
+                    data = building_data.split()
+                    building_type = BuildingTypes.__getattr__(data[3])
+                    variant = data[4]
+                    blocks = turnMatrix(building_type.blocks[variant], int(data[2]) * 90)
+                    blocks_variants = [[[None] * len(blocks_xy) for blocks_xy in blocks_x]
+                                    for blocks_x in blocks]
+                    count = 0
+                    for x in range(len(blocks_variants)):
+                        for y in range(len(blocks_variants[x])):
+                            for z in range(len(blocks_variants[x][y])):
+                                if blocks[x][y][z] is not None:
+                                    blocks_variants[x][y][z] = data[count + 5]
+                                    count += 1
+                            blocks_variants[x][y] = tuple(blocks_variants[x][y])
+                        blocks_variants[x] = tuple(blocks_variants[x])
+                    Building(int(data[0]),
+                            int(data[1]),
+                            int(data[2]) * 90,
+                            self,
+                            building_type,
+                            tuple(blocks_variants),
+                            data[4])
+        except:
+            pass
 
 
 class Citizen:

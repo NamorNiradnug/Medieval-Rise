@@ -19,12 +19,12 @@
             ]
         },
         "stone": {
-            "NORTH": "stone_diag",
-            "EAST": "stone_door",
-            "SOUTH": "stone_cross",
+            "NORTH": "stone_door",
+            "EAST": "stone_shutters",
+            "SOUTH": "stone_shutters",
             "WEST": "stone_shutters",
             "empty": [
-                "EAST"
+                "NORTH"
             ]
         }
     },
@@ -51,7 +51,7 @@
             "NORTH": "stone_shutters",
             "EAST": "stone_shutters",
             "SOUTH": "stone_shutters",
-            "WEST": "stone_cross"
+            "WEST": "stone_shutters"
         },
         "wood_window": {
             "NORTH": "wood_window",
@@ -61,13 +61,13 @@
         }
     },
     "roof": {
-        "lol": {
+        "first": {
             "NORTH": "roof_n",
             "EAST": "roof_w",
             "SOUTH": "roof_n",
             "WEST": "roof_w"
         },
-        "kek": {
+        "second": {
             "NORTH": "roof_w",
             "EAST": "roof_n",
             "SOUTH": "roof_w",
@@ -76,10 +76,10 @@
     },
     "arch": {
         "first": {
-            "WEST": "stone_arch"
+            "NORTH": "stone_arch"
         },
         "second": {
-            "WEST": "stone_arch_2"
+            "NORTH": "stone_arch_2"
         }
     }
 }
